@@ -1,0 +1,174 @@
+{
+  "measuredAt": "2026-10-25T20:23:22.706Z",
+  "runtime": "v24.16.0",
+  "scope": "Motor documental en Node local. No mide red, desbloqueo, interfaz ni renderizado PDF.",
+  "corpus": {
+    "documents": 244,
+    "fragments": 4074,
+    "indexMs": 2811.02
+  },
+  "methodology": {
+    "warmupRounds": 10,
+    "measuredRounds": 50,
+    "queriesPerRound": 10
+  },
+  "aggregate": {
+    "p50Ms": 10.23,
+    "p95Ms": 23.65,
+    "maxMs": 42.23
+  },
+  "queries": [
+    {
+      "query": "disnea dolor torácico",
+      "coldMs": 44.39,
+      "totalFragments": 236,
+      "totalDocuments": 83,
+      "returnedResults": 30,
+      "topOriginalPages": [
+        208,
+        1061,
+        258
+      ],
+      "p50Ms": 21.16,
+      "p95Ms": 29.03,
+      "maxMs": 34.63
+    },
+    {
+      "query": "gasometría acidosis",
+      "coldMs": 12.58,
+      "totalFragments": 306,
+      "totalDocuments": 113,
+      "returnedResults": 30,
+      "topOriginalPages": [
+        74,
+        1098,
+        536
+      ],
+      "p50Ms": 10.63,
+      "p95Ms": 15.64,
+      "maxMs": 17.57
+    },
+    {
+      "query": "sin fiebre disnea",
+      "coldMs": 25.19,
+      "totalFragments": 172,
+      "totalDocuments": 73,
+      "returnedResults": 30,
+      "topOriginalPages": [
+        258,
+        257,
+        260
+      ],
+      "p50Ms": 19.01,
+      "p95Ms": 24.52,
+      "maxMs": 28.74
+    },
+    {
+      "query": "menigitis",
+      "coldMs": 8.75,
+      "totalFragments": 94,
+      "totalDocuments": 35,
+      "returnedResults": 30,
+      "topOriginalPages": [
+        434,
+        433,
+        430
+      ],
+      "p50Ms": 3.84,
+      "p95Ms": 6.9,
+      "maxMs": 7.42
+    },
+    {
+      "query": "tromboembolismo",
+      "coldMs": 3.1,
+      "totalFragments": 112,
+      "totalDocuments": 41,
+      "returnedResults": 30,
+      "topOriginalPages": [
+        273,
+        266,
+        267
+      ],
+      "p50Ms": 3.13,
+      "p95Ms": 5.16,
+      "maxMs": 9.63
+    },
+    {
+      "query": "hiponatremia convulsiones",
+      "coldMs": 10.37,
+      "totalFragments": 286,
+      "totalDocuments": 84,
+      "returnedResults": 30,
+      "topOriginalPages": [
+        514,
+        517,
+        675
+      ],
+      "p50Ms": 8.91,
+      "p95Ms": 17.86,
+      "maxMs": 31.44
+    },
+    {
+      "query": "\"edema agudo de pulmón\"",
+      "coldMs": 20.14,
+      "totalFragments": 78,
+      "totalDocuments": 33,
+      "returnedResults": 30,
+      "topOriginalPages": [
+        171,
+        172,
+        94
+      ],
+      "p50Ms": 16.46,
+      "p95Ms": 32.17,
+      "maxMs": 42.23
+    },
+    {
+      "query": "ECG síncope",
+      "coldMs": 11.12,
+      "totalFragments": 279,
+      "totalDocuments": 106,
+      "returnedResults": 30,
+      "topOriginalPages": [
+        88,
+        390,
+        208
+      ],
+      "p50Ms": 5.84,
+      "p95Ms": 11.14,
+      "maxMs": 19.67
+    },
+    {
+      "query": "anamnesis dolor abdominal vómitos",
+      "coldMs": 13.63,
+      "totalFragments": 454,
+      "totalDocuments": 131,
+      "returnedResults": 30,
+      "topOriginalPages": [
+        1073,
+        329,
+        335
+      ],
+      "p50Ms": 12.25,
+      "p95Ms": 18.67,
+      "maxMs": 19.85
+    },
+    {
+      "query": "qwertyxyz",
+      "coldMs": 0.78,
+      "totalFragments": 0,
+      "totalDocuments": 0,
+      "returnedResults": 0,
+      "topOriginalPages": [],
+      "p50Ms": 0.18,
+      "p95Ms": 0.38,
+      "maxMs": 0.39
+    }
+  ],
+  "checks": [
+    "Referencias originales y locales coherentes en todos los resultados medidos.",
+    "Negación como contexto.",
+    "Errata de una edición señalada explícitamente.",
+    "Término inexistente sin coincidencias."
+  ]
+}
