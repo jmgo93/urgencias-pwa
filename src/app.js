@@ -9,6 +9,7 @@ import { mountUI, escapeHtml } from './ui.js';
 import { deriveLibraryKey, decryptAsset } from './crypto.js';
 import { inspectBundle, verifyBundleEntry } from './bundle.js';
 import { reconstructPage } from './page-text.js';
+import { disposePDFTask } from './pdf-lifecycle.js';
 import pdfWorkerURL from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
 const ui = mountUI(document.querySelector('#app'));
@@ -34,6 +35,7 @@ let lockTimer;
 let searchScroll = 0;
 let pdfLibrary;
 let pdfDocument;
+let pdfLoadingTask;
 let pdfBytes;
 let pdfDocumentId;
 let renderTask;
@@ -199,7 +201,9 @@ async function closePDF() {
   ++renderGeneration;
   renderTask?.cancel();
   renderTask = undefined;
-  if (pdfDocument) { const previous = pdfDocument; pdfDocument = undefined; await previous.destroy(); }
+  const previousTask = pdfLoadingTask ?? pdfDocument?.loadingTask;
+  pdfDocument = undefined;
+  pdfLoadingTask = undefined;
   pdfBytes?.fill(0);
   pdfBytes = undefined;
   pdfDocumentId = undefined;
@@ -212,6 +216,7 @@ async function closePDF() {
   e.readerCanvas.parentElement.hidden = false;
   e.readerTextToggle.setAttribute('aria-expanded', 'false');
   e.readerTextToggle.querySelector('span').textContent = 'Ver texto';
+  try { await disposePDFTask(previousTask); } catch { console.warn('El lector no pudo completar su cierre.'); }
 }
 async function openResult(id, addHistory = false) {
   if (!session) return;
@@ -241,12 +246,14 @@ async function openResult(id, addHistory = false) {
       if (session !== active || generation !== openGeneration) { bytes.fill(0); return; }
       pdfBytes = bytes;
       // PDF.js transfers its input buffer to a worker; retain a separate copy for explicit PDF opening.
-      const loaded = await pdfjs.getDocument({ data: bytes.slice(),
+      const task = pdfjs.getDocument({ data: bytes.slice(),
         cMapUrl: new URL('vendor/pdfjs/cmaps/', base).href, cMapPacked: true,
         standardFontDataUrl: new URL('vendor/pdfjs/standard_fonts/', base).href,
         wasmUrl: new URL('vendor/pdfjs/wasm/', base).href,
-        isEvalSupported: false, enableXfa: false }).promise;
-      if (session !== active || generation !== openGeneration) { await loaded.destroy(); return; }
+        isEvalSupported: false, enableXfa: false });
+      pdfLoadingTask = task;
+      const loaded = await task.promise;
+      if (session !== active || generation !== openGeneration) { await disposePDFTask(task); return; }
       pdfDocument = loaded;
       pdfDocumentId = result.documentId;
       blobURL = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));

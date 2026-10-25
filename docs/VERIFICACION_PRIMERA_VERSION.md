@@ -6,7 +6,7 @@ Aplicación desplegada en https://jmgo93.github.io/urgencias-pwa/ mediante el fl
 
 ## Pruebas reproducibles
 
-- `npm test`: 36 pruebas locales aprobadas, sin fallos ni omisiones en el entorno preparado. Incluyen búsqueda, worker, cifrado, manipulación de archivos, importación por bloques, texto solapado, escape de HTML y rutas HTTP.
+- La suite incluye búsqueda, worker, cifrado, manipulación de archivos, importación por bloques, texto solapado, escape de HTML y rutas HTTP. Se añadió una regresión con PDF.js real para abrir, cerrar y cambiar documentos tras detectar el cambio de API de limpieza en la versión 6.
 - Compilación y guardia de contenido personal aprobadas. La CI de la PR y de `main` terminó correctamente; las comprobaciones que requieren la biblioteca personal se omiten cuando no está presente en GitHub.
 - El corpus local cubre 244 documentos, 4074 fragmentos y 1101 páginas; sus PDF se cotejaron con el original página por página, incluidos los píxeles renderizados. El informe detallado permanece junto a la biblioteca local.
 - El archivo de traslado contiene 245 activos cifrados y su manifiesto; se verificaron tamaños y SHA-256. No incluye la contraseña.
