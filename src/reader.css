@@ -3,8 +3,8 @@
 .reader-stage canvas { max-width: none; flex-shrink: 0; }
 .reader-status:empty, .offline-status:empty { margin: 0; padding: 0; }
 .library-import { margin-top: 20px; border-top: 1px solid var(--md-sys-color-outline-variant); padding-top: 20px; }
-.library-import label { cursor: pointer; width: 100%; text-align: center; }
-.library-import label[aria-disabled="true"] { pointer-events: none; opacity: .6; }
+.library-import button { cursor: pointer; width: 100%; text-align: center; }
+.library-import button:disabled { pointer-events: none; opacity: .6; }
 .library-import p { font-size: 12px; line-height: 1.7; color: var(--md-sys-color-on-surface-variant); margin-top: 10px; }
 body[data-view="reader"] .reader-stage { align-items: flex-start; }
 @media (max-width: 520px) {

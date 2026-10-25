@@ -9,6 +9,7 @@ import { mountUI, escapeHtml } from './ui.js';
 import { deriveLibraryKey, decryptAsset } from './crypto.js';
 import { inspectBundle, verifyBundleEntry } from './bundle.js';
 import { reconstructPage } from './page-text.js';
+import { disposePDFTask } from './pdf-lifecycle.js';
 import pdfWorkerURL from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
 const ui = mountUI(document.querySelector('#app'));
@@ -19,8 +20,9 @@ const localHost = ['localhost', '127.0.0.1'].includes(location.hostname);
 if (!localHost) document.querySelector('.local-badge').lastChild.textContent = ' Biblioteca del dispositivo';
 const importer = document.createElement('div');
 importer.className = 'library-import';
-importer.innerHTML = `<label for="library-file" class="button button-tonal">Importar biblioteca del dispositivo</label><input id="library-file" type="file" hidden aria-describedby="import-status"><p id="import-status" role="status" aria-live="polite">Selecciona Biblioteca.urgencias una vez. El archivo permanece en este dispositivo y no se sube a Internet.</p>`;
+importer.innerHTML = `<button id="import-library-button" type="button" class="button button-tonal">Importar biblioteca del dispositivo</button><input id="library-file" type="file" hidden aria-describedby="import-status"><p id="import-status" role="status" aria-live="polite">Selecciona Biblioteca.urgencias una vez. El archivo permanece en este dispositivo y no se sube a Internet.</p>`;
 document.querySelector('.unlock-card').append(importer);
+document.querySelector('#import-library-button').addEventListener('click', () => document.querySelector('#library-file').click());
 const formatBytes = bytes => `${(bytes / 1048576).toFixed(1)} MB`;
 let manifest;
 let session;
@@ -33,6 +35,7 @@ let lockTimer;
 let searchScroll = 0;
 let pdfLibrary;
 let pdfDocument;
+let pdfLoadingTask;
 let pdfBytes;
 let pdfDocumentId;
 let renderTask;
@@ -198,7 +201,9 @@ async function closePDF() {
   ++renderGeneration;
   renderTask?.cancel();
   renderTask = undefined;
-  if (pdfDocument) { const previous = pdfDocument; pdfDocument = undefined; await previous.destroy(); }
+  const previousTask = pdfLoadingTask ?? pdfDocument?.loadingTask;
+  pdfDocument = undefined;
+  pdfLoadingTask = undefined;
   pdfBytes?.fill(0);
   pdfBytes = undefined;
   pdfDocumentId = undefined;
@@ -211,6 +216,7 @@ async function closePDF() {
   e.readerCanvas.parentElement.hidden = false;
   e.readerTextToggle.setAttribute('aria-expanded', 'false');
   e.readerTextToggle.querySelector('span').textContent = 'Ver texto';
+  try { await disposePDFTask(previousTask); } catch { console.warn('El lector no pudo completar su cierre.'); }
 }
 async function openResult(id, addHistory = false) {
   if (!session) return;
@@ -240,12 +246,14 @@ async function openResult(id, addHistory = false) {
       if (session !== active || generation !== openGeneration) { bytes.fill(0); return; }
       pdfBytes = bytes;
       // PDF.js transfers its input buffer to a worker; retain a separate copy for explicit PDF opening.
-      const loaded = await pdfjs.getDocument({ data: bytes.slice(),
+      const task = pdfjs.getDocument({ data: bytes.slice(),
         cMapUrl: new URL('vendor/pdfjs/cmaps/', base).href, cMapPacked: true,
         standardFontDataUrl: new URL('vendor/pdfjs/standard_fonts/', base).href,
         wasmUrl: new URL('vendor/pdfjs/wasm/', base).href,
-        isEvalSupported: false, enableXfa: false }).promise;
-      if (session !== active || generation !== openGeneration) { await loaded.destroy(); return; }
+        isEvalSupported: false, enableXfa: false });
+      pdfLoadingTask = task;
+      const loaded = await task.promise;
+      if (session !== active || generation !== openGeneration) { await disposePDFTask(task); return; }
       pdfDocument = loaded;
       pdfDocumentId = result.documentId;
       blobURL = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
@@ -381,9 +389,9 @@ document.querySelector('#library-file').addEventListener('change', async event =
   const file = event.target.files?.[0];
   if (!file) return;
   const status = document.querySelector('#import-status');
-  const label = importer.querySelector('label');
+  const label = importer.querySelector('button');
   e.unlockButton.disabled = true;
-  label.setAttribute('aria-disabled', 'true');
+  label.disabled = true;
   event.target.disabled = true;
   try {
     status.textContent = 'Comprobando el paquete de la biblioteca…';
@@ -407,7 +415,7 @@ document.querySelector('#library-file').addEventListener('change', async event =
       : 'No se pudo importar. Selecciona el paquete Biblioteca.urgencias completo y sin modificar.';
   } finally {
     e.unlockButton.disabled = false;
-    label.removeAttribute('aria-disabled');
+    label.disabled = false;
     event.target.disabled = false;
     event.target.value = '';
   }
@@ -461,7 +469,11 @@ e.offlineButton.addEventListener('click', async () => {
   } finally {
     offlineAbort = undefined;
     e.offlineButton.disabled = false;
-    if (session === active) updateOfflineState();
+    if (session === active) {
+      const status = e.offlineStatus.textContent;
+      await updateOfflineState();
+      if (!e.offlineStatus.textContent) e.offlineStatus.textContent = status;
+    }
   }
 });
 e.removeOfflineButton?.addEventListener('click', async () => {
