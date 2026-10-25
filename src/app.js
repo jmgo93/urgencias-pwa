@@ -113,6 +113,7 @@ async function openLibrary({ password, savedKey, knownManifest, remember = false
   openingLibrary = true;
   e.unlockButton.disabled = true;
   e.rememberDevice.disabled = true;
+  e.removeOfflineButton.disabled = true;
   document.querySelector('#import-library-button').disabled = true;
   e.deviceAccessStatus.textContent = '';
   e.unlockStatus.textContent = savedKey ? 'Abriendo la biblioteca de este dispositivo…' : 'Abriendo la biblioteca protegida…';
@@ -147,6 +148,7 @@ async function openLibrary({ password, savedKey, knownManifest, remember = false
     e.sectionFilter.innerHTML = '<option value="">Todas las secciones</option>' + corpus.sections.map(section => `<option value="${escapeHtml(section.id)}">${escapeHtml(section.title)}</option>`).join('');
     e.libraryTitle.textContent = `${corpus.documents.length} documentos · ${corpus.sourcePageCount} páginas`;
     e.offlineButton.title = `Descarga cifrada: ${formatBytes(manifest.totalBytes)}`;
+    if (session !== active) return;
     if (!savedKey) {
       try {
         if (remember) { await saveDeviceAccess(manifest, key); active.remembered = true; }
@@ -182,6 +184,7 @@ async function openLibrary({ password, savedKey, knownManifest, remember = false
     openingLibrary = false;
     e.unlockButton.disabled = false;
     e.rememberDevice.disabled = false;
+    e.removeOfflineButton.disabled = Boolean(importingLibrary || offlineAbort || restoringDevice);
     document.querySelector('#import-library-button').disabled = false;
   }
 }
@@ -190,6 +193,7 @@ async function restoreDeviceAccess() {
   restoringDevice = true;
   e.unlockButton.disabled = true;
   e.rememberDevice.disabled = true;
+  e.removeOfflineButton.disabled = true;
   document.querySelector('#import-library-button').disabled = true;
   try {
     const local = await getActiveLibraryManifest(base);
@@ -201,6 +205,7 @@ async function restoreDeviceAccess() {
     restoringDevice = false;
     e.unlockButton.disabled = false;
     e.rememberDevice.disabled = false;
+    e.removeOfflineButton.disabled = Boolean(openingLibrary || importingLibrary || offlineAbort);
     document.querySelector('#import-library-button').disabled = false;
   }
 }
@@ -629,7 +634,7 @@ e.offlineButton.addEventListener('click', async () => {
   }
 });
 e.removeOfflineButton?.addEventListener('click', async () => {
-  if (importingLibrary || offlineAbort) return;
+  if (importingLibrary || offlineAbort || openingLibrary || restoringDevice) return;
   e.removeOfflineButton.disabled = true;
   try {
     await forgetDeviceAccess();
