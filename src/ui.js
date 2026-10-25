@@ -78,7 +78,7 @@ export function mountUI(root) {
       <section id="lock-view" class="lock-view" aria-labelledby="lock-title">
         <div class="lock-intro">
           <div class="eyebrow"><span class="eyebrow-line"></span> MENOS TIEMPO BUSCANDO</div>
-          <h1 id="lock-title">Tu biblioteca de urgencias,<br><span>a una búsqueda.</span></h1>
+          <h1 id="lock-title">Tu biblioteca de urgencias, <br><span>a una búsqueda.</span></h1>
           <p class="intro-copy">Conecta síntomas, diagnósticos y conceptos. Encuentra el contenido que necesitas y abre directamente su página original.</p>
           <div class="library-preview" aria-label="Cómo funciona la biblioteca"><div class="preview-search">${icon('search')}<span>Disnea y dolor torácico</span><span class="preview-key">↵</span></div><div class="preview-result"><span class="preview-result-icon">${icon('page')}</span><div><strong>El contenido, en su contexto</strong><span>Secciones · capítulos · páginas originales</span></div>${icon('arrow')}</div></div>
           <div class="intro-features"><span>${icon('check')} Consulta por conceptos</span><span>${icon('check')} Documentos pequeños</span><span>${icon('check')} Lectura sin perder el contexto</span></div>
