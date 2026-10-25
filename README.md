@@ -4,7 +4,7 @@ Biblioteca personal de consulta documental: escribe una frase, compara los fragm
 
 La primera versión funciona sin backend ni base de datos. Repositorio: [jmgo93/urgencias-pwa](https://github.com/jmgo93/urgencias-pwa). Aplicación: [Urgencias en GitHub Pages](https://jmgo93.github.io/urgencias-pwa/); el estado del despliegue se comprueba en Actions.
 
-Para usar el libro en el móvil, copia el paquete privado `Biblioteca.urgencias`, pulsa **Importar biblioteca del dispositivo** en la aplicación y desbloquéalo con la contraseña. La importación es local: no sube el archivo a GitHub. [Guía para el móvil](docs/TRASLADO_AL_MOVIL.md).
+Para usar el libro en el móvil, **instala primero la app y ábrela desde su icono**. Importa entonces el paquete privado `Biblioteca.urgencias` desde la app instalada, pulsa **Preparar uso sin conexión** y espera al estado **Lista para usar sin conexión**. Podrás desbloquear la biblioteca con tu contraseña, buscar y abrir los PDF sin Internet. La importación es local: no sube el archivo a GitHub. [Guía para el móvil](docs/TRASLADO_AL_MOVIL.md).
 
 ## Probar la versión preparada
 
@@ -22,7 +22,8 @@ La [guía de primera prueba](docs/PRIMERA_PRUEBA_LOCAL.md) explica los controles
 - Lector de PDF con página original y página del documento pequeño, navegación, zoom y texto extraído. Conserva consulta, filtros, resultados y posición al volver.
 - Biblioteca local de **244 PDF: 198 capítulos, 45 casos y un documento de preliminares**, que cubren las **1.101 páginas** del libro. Las **32 páginas con OCR** están identificadas.
 - Catálogo, texto y PDF cifrados; desbloqueo local con contraseña, bloqueo manual y tras 15 minutos de inactividad. La clave de la sesión se mantiene en memoria.
-- PWA con recursos locales, diseño basado en Material 3, instalación cuando el navegador la ofrece y descarga voluntaria de la biblioteca cifrada para consultar sin conexión.
+- PWA instalable con recursos locales y diseño basado en Material 3. El botón **Instalar app** está disponible antes del desbloqueo: ofrece la instalación del navegador o instrucciones para iPhone/iPad, Android y ordenador.
+- Preparación explícita del uso sin conexión, con estado visible de los recursos de la app y de la biblioteca cifrada guardada en el dispositivo.
 
 Las coincidencias expresan **relevancia documental, no probabilidad diagnóstica**. El contenido es de la edición de 2018. El texto extraído y los candidatos a subsección no sustituyen la página original; no se afirma que estén revisados clínicamente. Los cuestionarios, los casos interactivos y los algoritmos docentes pertenecen a fases posteriores.
 
@@ -60,7 +61,7 @@ El contenido permanece local; cambiar su formato o cifrarlo no concede derechos 
 
 Para crear el archivo que se traslada al móvil, ejecuta `node scripts/pack-library.mjs` después del cifrado. El paquete se genera fuera del repositorio en `biblioteca-local/Para el movil/Biblioteca.urgencias` y no contiene la contraseña. La publicación del código se lanza manualmente con el flujo **Publicar en GitHub Pages**. [Configuración de Pages](docs/PUBLICACION_PAGES.md).
 
-Para el funcionamiento sin conexión hay que pulsar **Guardar sin conexión**, esperar a que termine la descarga y disponer de espacio suficiente para unos 549 MiB adicionales en el navegador. Sólo se guardan los paquetes cifrados y los recursos de la aplicación. Al recargar, cerrar o bloquear se vuelve a pedir la contraseña. El navegador puede liberar almacenamiento; **Eliminar descargas** permite borrarlo voluntariamente.
+Para el funcionamiento sin conexión, pulsa **Preparar uso sin conexión** y espera al estado **Lista para usar sin conexión**. La importación necesita espacio para unos 549 MiB de biblioteca cifrada, además del archivo personal y los recursos de la aplicación. La biblioteca se incorpora desde tu archivo; no se descarga de GitHub. Al recargar, cerrar o bloquear se vuelve a pedir la contraseña, que también funciona sin conexión. El navegador puede liberar almacenamiento; conserva el archivo original y usa **Eliminar biblioteca del dispositivo** si deseas borrar la copia guardada en la app. Si instalas la app después de haber usado el navegador, comprueba su estado e importa la biblioteca desde la app instalada cuando sea necesario.
 
 ## Plan de evolución
 

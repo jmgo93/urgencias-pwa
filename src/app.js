@@ -5,17 +5,33 @@ import '@fontsource/poppins/latin-600.css';
 import '@fontsource/poppins/latin-700.css';
 import './styles.css';
 import './reader.css';
+import './offline.css';
 import { mountUI, escapeHtml } from './ui.js';
 import { deriveLibraryKey, decryptAsset } from './crypto.js';
 import { inspectBundle, verifyBundleEntry } from './bundle.js';
 import { reconstructPage } from './page-text.js';
 import { disposePDFTask } from './pdf-lifecycle.js';
+import { setupInstallation } from './install.js';
+import { libraryCacheName, getActiveLibraryManifest, saveLibraryManifest, inspectLibraryCache,
+  getLibraryAssetResponse, fetchWithTimeout, CONTROL_CACHE, LIBRARY_PREFIX } from './offline.js';
 import pdfWorkerURL from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
 const ui = mountUI(document.querySelector('#app'));
 const e = ui.elements;
 const base = new URL('./', document.baseURI);
 const libraryURL = new URL('library/', base);
+setupInstallation(e.installButton);
+const offlinePanel = document.createElement('section');
+offlinePanel.className = 'offline-panel';
+offlinePanel.setAttribute('aria-label', 'Disponibilidad sin conexión');
+offlinePanel.innerHTML = `<div class="offline-overview"><div><strong id="offline-ready" role="status" aria-live="polite">Comprobando el uso sin conexión…</strong><span id="network-status"></span></div><div class="offline-actions"></div></div><div class="offline-progress"></div><details><summary>Ver qué está guardado en este dispositivo</summary><ul><li id="offline-app-state">Aplicación: comprobando…</li><li id="offline-library-state">Biblioteca: comprobando…</li><li id="offline-storage-state">Almacenamiento: comprobando…</li></ul><p>La contraseña también funciona sin Internet. Conserva tu archivo de biblioteca por si borras los datos de la app o el navegador libera su almacenamiento.</p><div class="offline-remove"></div></details>`;
+document.querySelector('.app-header').after(offlinePanel);
+offlinePanel.querySelector('.offline-actions').append(e.offlineButton);
+offlinePanel.querySelector('.offline-progress').append(e.offlineStatus);
+offlinePanel.querySelector('.offline-remove').append(e.removeOfflineButton);
+e.offlineButton.textContent = 'Preparar uso sin conexión';
+e.offlineButton.className = 'button button-tonal button-compact';
+e.removeOfflineButton.textContent = 'Eliminar biblioteca del dispositivo';
 const localHost = ['localhost', '127.0.0.1'].includes(location.hostname);
 if (!localHost) document.querySelector('.local-badge').lastChild.textContent = ' Biblioteca del dispositivo';
 const importer = document.createElement('div');
@@ -23,7 +39,7 @@ importer.className = 'library-import';
 importer.innerHTML = `<button id="import-library-button" type="button" class="button button-tonal">Importar biblioteca del dispositivo</button><input id="library-file" type="file" hidden aria-describedby="import-status"><p id="import-status" role="status" aria-live="polite">Selecciona Biblioteca.urgencias una vez. El archivo permanece en este dispositivo y no se sube a Internet.</p>`;
 document.querySelector('.unlock-card').append(importer);
 document.querySelector('#import-library-button').addEventListener('click', () => document.querySelector('#library-file').click());
-const formatBytes = bytes => `${(bytes / 1048576).toFixed(1)} MB`;
+const formatBytes = bytes => `${(bytes / 1000000).toLocaleString('es-ES', { maximumFractionDigits: 1 })} MB`;
 let manifest;
 let session;
 let results = [];
@@ -44,8 +60,10 @@ let openGeneration = 0;
 let pageNumber = 1;
 let zoom = 1;
 let blobURL;
-let installPrompt;
 let offlineAbort;
+let importingLibrary = false;
+let availabilityGeneration = 0;
+let serviceWorkerRegistration;
 
 function touchSession() {
   clearTimeout(lockTimer);
@@ -53,17 +71,6 @@ function touchSession() {
 }
 for (const event of ['pointerdown', 'keydown']) document.addEventListener(event, touchSession, { passive: true });
 
-async function fetchSafe(url) {
-  try {
-    const response = await fetch(url, { credentials: 'omit', cache: 'no-store' });
-    if (!response.ok) throw new Error('Archivo no disponible.');
-    return response;
-  } catch (error) {
-    const response = await caches.match(url);
-    if (response) return response;
-    throw error;
-  }
-}
 function assetURL(asset) {
   if (!asset || !/^[a-f0-9]{64}\.bin$/.test(asset.file)) throw new Error('Archivo de biblioteca inválido.');
   return new URL(asset.file, libraryURL).href;
@@ -78,12 +85,18 @@ function validateManifest(value) {
   return value;
 }
 async function loadManifest() {
-  return validateManifest(await (await fetchSafe(new URL('bootstrap.json', libraryURL).href)).json());
+  const local = await getActiveLibraryManifest(base);
+  if (local) return validateManifest(local);
+  const response = await fetchWithTimeout(new URL('bootstrap.json', libraryURL).href);
+  if (!response.ok) throw new Error('Importa la biblioteca del dispositivo.');
+  const value = validateManifest(await response.json());
+  try { await saveLibraryManifest(value, base); } catch {}
+  return value;
 }
 async function readAsset(id, activeSession = session) {
   if (!activeSession) throw new Error('La biblioteca está bloqueada.');
   const asset = activeSession.manifest.assets[id];
-  const cipher = await (await fetchSafe(assetURL(asset))).arrayBuffer();
+  const cipher = await (await getLibraryAssetResponse(asset, activeSession.manifest, base)).arrayBuffer();
   if (session !== activeSession) throw new Error('La sesión ha terminado.');
   return decryptAsset(cipher, activeSession.key, asset, activeSession.manifest.corpusVersion);
 }
@@ -381,10 +394,10 @@ async function lock(message = '') {
   history.replaceState({}, '', base.pathname);
   window.scrollTo(0, 0);
   e.password.focus();
+  updateOfflineState();
 }
 e.lockButton.addEventListener('click', () => lock());
 
-function libraryCacheName(value) { return `urgencias-encrypted-${value.corpusVersion}`; }
 document.querySelector('#library-file').addEventListener('change', async event => {
   const file = event.target.files?.[0];
   if (!file) return;
@@ -393,11 +406,14 @@ document.querySelector('#library-file').addEventListener('change', async event =
   e.unlockButton.disabled = true;
   label.disabled = true;
   event.target.disabled = true;
+  importingLibrary = true;
+  e.offlineButton.disabled = true;
+  e.removeOfflineButton.disabled = true;
   try {
     status.textContent = 'Comprobando el paquete de la biblioteca…';
     const bundle = await inspectBundle(file);
     validateManifest(bundle.manifest);
-    await navigator.storage?.persist?.();
+    try { await navigator.storage?.persist?.(); } catch {}
     const cache = await caches.open(libraryCacheName(bundle.manifest));
     for (let i = 0; i < bundle.entries.length; i++) {
       const entry = bundle.entries[i];
@@ -405,7 +421,7 @@ document.querySelector('#library-file').addEventListener('change', async event =
       await cache.put(assetURL(entry.asset), new Response(entry.blob, { headers: { 'Content-Type': 'application/octet-stream' } }));
       status.textContent = `Importando biblioteca cifrada: ${i + 1}/${bundle.entries.length}. No cierres esta ventana.`;
     }
-    await cache.put(new URL('bootstrap.json', libraryURL).href, new Response(JSON.stringify(bundle.manifest), { headers: { 'Content-Type': 'application/json' } }));
+    await saveLibraryManifest(bundle.manifest, base);
     manifest = bundle.manifest;
     status.textContent = 'Biblioteca importada en este dispositivo. Introduce la contraseña para abrirla.';
     e.password.focus();
@@ -418,83 +434,160 @@ document.querySelector('#library-file').addEventListener('change', async event =
     label.disabled = false;
     event.target.disabled = false;
     event.target.value = '';
+    importingLibrary = false;
+    e.offlineButton.disabled = false;
+    e.removeOfflineButton.disabled = false;
+    updateOfflineState();
   }
 });
+function getAppOfflineStatus() {
+  const worker = navigator.serviceWorker?.controller;
+  if (!worker) return Promise.resolve({ complete: false, present: 0, total: 0 });
+  return new Promise(resolve => {
+    const channel = new MessageChannel();
+    const finish = result => { clearTimeout(timer); channel.port1.close(); resolve(result); };
+    const timer = setTimeout(() => finish({ complete: false, present: 0, total: 0 }), 2500);
+    channel.port1.onmessage = ({ data }) => finish(data?.type === 'OFFLINE_STATUS' ? data : { complete: false });
+    worker.postMessage({ type: 'GET_OFFLINE_STATUS' }, [channel.port2]);
+  });
+}
 async function updateOfflineState() {
-  if (!session || !('caches' in window)) return;
-  const active = session;
-  const name = libraryCacheName(active.manifest);
-  const exists = (await caches.keys()).includes(name);
-  let complete = false;
-  if (exists) {
-    const cache = await caches.open(name);
-    const keys = await cache.keys();
-    complete = keys.length >= Object.keys(active.manifest.assets).length + 1;
+  const generation = ++availabilityGeneration;
+  const network = document.querySelector('#network-status');
+  network.textContent = navigator.onLine ? 'Conexión detectada · se usa primero la copia local' : 'Sin conexión · se usa la copia local';
+  if (!('caches' in window) || !('serviceWorker' in navigator)) {
+    document.querySelector('#offline-ready').textContent = 'Este navegador no permite guardar la app sin conexión';
+    document.querySelector('#offline-app-state').textContent = 'Abre la aplicación en Safari, Chrome o Edge con almacenamiento habilitado.';
+    e.offlineButton.disabled = true;
+    return;
   }
-  if (session !== active) return;
-  e.offlineStatus.textContent = complete ? `Biblioteca guardada sin conexión · ${formatBytes(active.manifest.totalBytes)} cifrados` : '';
-  e.offlineButton.textContent = complete ? 'Comprobar descarga' : 'Guardar sin conexión';
-  if (e.removeOfflineButton) e.removeOfflineButton.hidden = !exists;
+  try {
+    const library = session?.manifest ?? manifest ?? await getActiveLibraryManifest(base);
+    const [shell, saved, persistent, names] = await Promise.all([
+      getAppOfflineStatus(),
+      library ? inspectLibraryCache(library, base) : null,
+      navigator.storage?.persisted?.().catch(() => false) ?? false,
+      caches.keys(),
+    ]);
+    if (generation !== availabilityGeneration) return;
+    const ready = Boolean(shell.complete && saved?.complete);
+    offlinePanel.dataset.ready = String(ready);
+    document.querySelector('#offline-ready').textContent = ready ? 'Lista para usar sin conexión'
+      : saved?.complete ? 'Biblioteca guardada · preparando la aplicación'
+      : shell.complete ? 'Aplicación guardada · prepara tu biblioteca'
+      : 'Prepara la app para usarla sin conexión';
+    document.querySelector('#offline-app-state').textContent = shell.complete ? 'Aplicación: guardada con el buscador y el lector de PDF.' : 'Aplicación: pendiente de completar su descarga.';
+    document.querySelector('#offline-library-state').textContent = saved?.complete
+      ? `Biblioteca: todos los documentos guardados · ${formatBytes(saved.totalBytes)} cifrados.`
+      : saved ? `Biblioteca: ${saved.present} de ${saved.total} archivos guardados. Faltan documentos.`
+      : 'Biblioteca: importa tu archivo personal Biblioteca.urgencias.';
+    document.querySelector('#offline-storage-state').textContent = persistent
+      ? 'Almacenamiento persistente: concedido por el navegador.'
+      : 'Almacenamiento del navegador: conserva también una copia del archivo de biblioteca.';
+    e.offlineButton.title = library ? `Comprueba y completa la copia local de ${formatBytes(library.totalBytes)}.` : 'Guarda la app e importa la biblioteca para poder consultar sin Internet.';
+    e.removeOfflineButton.hidden = !names.some(name => name.startsWith(LIBRARY_PREFIX));
+  } catch {
+    if (generation === availabilityGeneration) document.querySelector('#offline-ready').textContent = 'No se ha podido comprobar el almacenamiento local';
+  }
+}
+async function prepareAppOffline() {
+  if (!('serviceWorker' in navigator)) throw new Error('Abre esta página en un navegador que permita instalar aplicaciones.');
+  let status = await getAppOfflineStatus();
+  if (!status.complete && !status.version) {
+    await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('La aplicación todavía se está guardando. Espera unos instantes y vuelve a intentarlo.')), 20000);
+      Promise.resolve(serviceWorkerRegistration).then(() => navigator.serviceWorker.ready)
+        .then(registration => { clearTimeout(timer); resolve(registration); }, error => { clearTimeout(timer); reject(error); });
+    });
+    if (!navigator.serviceWorker.controller) await new Promise(resolve => {
+      const done = () => { clearTimeout(timer); navigator.serviceWorker.removeEventListener('controllerchange', done); resolve(); };
+      const timer = setTimeout(done, 8000);
+      navigator.serviceWorker.addEventListener('controllerchange', done, { once: true });
+    });
+    status = await getAppOfflineStatus();
+  }
+  if (!status.version) throw new Error('La aplicación se está actualizando. Vuelve a abrirla y prepara el uso sin conexión.');
+  if (!status.complete) {
+    const cache = await caches.open(status.version);
+    for (const path of status.missing || []) {
+      const url = new URL(path);
+      if (url.origin !== base.origin || !url.pathname.startsWith(base.pathname) || url.pathname.startsWith(libraryURL.pathname)) throw new Error('Recurso de aplicación inválido.');
+      const response = await fetchWithTimeout(url.href);
+      if (!response.ok) throw new Error('No se pudo completar la descarga de la app. Vuelve a intentarlo con conexión.');
+      await cache.put(url.href, response);
+    }
+    status = await getAppOfflineStatus();
+  }
+  if (!status.complete) throw new Error('Faltan recursos de la aplicación. Vuelve a intentarlo con conexión.');
 }
 e.offlineButton.addEventListener('click', async () => {
-  if (!session || offlineAbort) return;
-  const active = session;
-  const assets = Object.values(active.manifest.assets);
+  if (offlineAbort || importingLibrary) return;
   const abort = new AbortController();
   offlineAbort = abort;
   e.offlineButton.disabled = true;
+  e.removeOfflineButton.disabled = true;
   try {
-    await navigator.storage?.persist?.();
-    const cache = await caches.open(libraryCacheName(active.manifest));
-    let loaded = 0;
-    for (let i = 0; i < assets.length; i++) {
-      if (abort.signal.aborted || session !== active) throw new DOMException('Aborted', 'AbortError');
-      const asset = assets[i];
-      const url = assetURL(asset);
-      if (!(await cache.match(url))) {
-        const response = await fetch(url, { cache: 'no-store', credentials: 'omit', signal: abort.signal });
-        if (!response.ok) throw new Error('Falta un documento.');
-        await cache.put(url, response);
-      }
-      loaded += asset.bytes;
-      e.offlineStatus.textContent = `Guardando archivos cifrados: ${i + 1}/${assets.length} · ${formatBytes(loaded)} de ${formatBytes(active.manifest.totalBytes)}`;
+    e.offlineStatus.textContent = 'Comprobando la descarga de la aplicación…';
+    try { await navigator.storage?.persist?.(); } catch {}
+    await prepareAppOffline();
+    const library = session?.manifest ?? manifest ?? await getActiveLibraryManifest(base);
+    if (!library) {
+      e.offlineStatus.textContent = 'La aplicación está guardada. Importa ahora Biblioteca.urgencias desde este dispositivo.';
+      importer.querySelector('button').focus();
+      return;
     }
-    const bootstrap = new URL('bootstrap.json', libraryURL).href;
-    await cache.put(bootstrap, new Response(JSON.stringify(active.manifest), { headers: { 'Content-Type': 'application/json' } }));
-    e.offlineStatus.textContent = 'Biblioteca completa guardada sin conexión.';
+    const assets = Object.values(library.assets);
+    const saved = await inspectLibraryCache(library, base);
+    if (!saved.complete) {
+      const missing = new Set(saved.missingIds);
+      let loaded = saved.bytes;
+      let present = saved.present;
+      for (const asset of assets.filter(asset => missing.has(asset.id))) {
+        if (abort.signal.aborted) throw new DOMException('Aborted', 'AbortError');
+        const response = await getLibraryAssetResponse(asset, library, base, { signal: abort.signal });
+        await response.body?.cancel();
+        loaded += asset.bytes;
+        present++;
+        e.offlineStatus.textContent = `Guardando biblioteca cifrada: ${present}/${assets.length} · ${formatBytes(loaded)} de ${formatBytes(library.totalBytes)}`;
+      }
+    }
+    if (abort.signal.aborted) throw new DOMException('Aborted', 'AbortError');
+    await saveLibraryManifest(library, base);
+    if (!(await inspectLibraryCache(library, base)).complete) throw new Error('Faltan documentos. Importa de nuevo tu archivo Biblioteca.urgencias.');
+    e.offlineStatus.textContent = 'Comprobación completa. Puedes cerrar la app y volver a abrirla sin Internet.';
   } catch (error) {
-    if (session === active) e.offlineStatus.textContent = error.name === 'QuotaExceededError'
-      ? 'No hay espacio suficiente para toda la biblioteca. Puedes eliminar las descargas y seguir consultando con conexión.'
-      : 'La descarga no se completó. Vuelve a pulsar Guardar sin conexión para continuar.';
+    e.offlineStatus.textContent = error.name === 'QuotaExceededError'
+      ? 'No hay espacio suficiente para guardar todos los documentos. Libera espacio y vuelve a preparar la biblioteca.'
+      : error.name === 'AbortError' ? 'Preparación cancelada. Puedes continuarla más adelante.' : error.message;
   } finally {
     offlineAbort = undefined;
     e.offlineButton.disabled = false;
-    if (session === active) {
-      const status = e.offlineStatus.textContent;
-      await updateOfflineState();
-      if (!e.offlineStatus.textContent) e.offlineStatus.textContent = status;
-    }
+    e.removeOfflineButton.disabled = false;
+    updateOfflineState();
   }
 });
 e.removeOfflineButton?.addEventListener('click', async () => {
+  if (importingLibrary || offlineAbort) return;
   offlineAbort?.abort();
-  for (const name of await caches.keys()) if (name.startsWith('urgencias-encrypted-')) await caches.delete(name);
-  e.offlineStatus.textContent = 'Descargas eliminadas de este dispositivo.';
+  for (const name of await caches.keys()) if (name.startsWith(LIBRARY_PREFIX) || name === CONTROL_CACHE) await caches.delete(name);
+  await lock('Biblioteca retirada del dispositivo. Importa tu archivo para volver a consultarla.');
+  e.offlineStatus.textContent = 'Biblioteca eliminada de este dispositivo. La aplicación sigue instalada.';
   e.removeOfflineButton.hidden = true;
-  e.offlineButton.textContent = 'Guardar sin conexión';
 });
-window.addEventListener('beforeinstallprompt', event => {
-  event.preventDefault(); installPrompt = event; e.installButton.hidden = false;
-});
-e.installButton.addEventListener('click', async () => {
-  if (!installPrompt) return;
-  await installPrompt.prompt();
-  installPrompt = undefined; e.installButton.hidden = true;
-});
-window.addEventListener('appinstalled', () => { e.installButton.hidden = true; });
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register(new URL('sw.js', base), { scope: base.pathname }).catch(() => {
-    e.offlineStatus.textContent = 'La consulta está disponible; la instalación sin conexión no ha podido activarse.';
-  });
+  serviceWorkerRegistration = navigator.serviceWorker.register(new URL('sw.js', base), { scope: base.pathname })
+    .then(registration => { updateOfflineState(); return registration; })
+    .catch(async () => {
+      // An update check may fail offline while the installed application is complete.
+      if (!(await getAppOfflineStatus()).complete) e.offlineStatus.textContent = 'No se pudo guardar la aplicación. Vuelve a prepararla con conexión.';
+      updateOfflineState();
+      return null;
+    });
+  navigator.serviceWorker.addEventListener('controllerchange', updateOfflineState);
 }
+window.addEventListener('online', updateOfflineState);
+window.addEventListener('offline', updateOfflineState);
+window.addEventListener('focus', updateOfflineState);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) updateOfflineState(); });
 ui.setLocked(true);
+updateOfflineState();

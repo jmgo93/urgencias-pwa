@@ -1,0 +1,29 @@
+.offline-panel { width: min(var(--layout-width), calc(100% - 80px)); margin: 18px auto 0; border: 1px solid var(--md-sys-color-outline-variant); background: var(--md-sys-color-surface-container-low); border-radius: 18px; padding: 16px 20px; }
+.offline-overview { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.offline-overview > div:first-child { min-width: 0; }
+#offline-ready { display: block; font-size: 18px; line-height: 1.6; font-weight: 800; }
+.offline-panel[data-ready="true"] #offline-ready { color: var(--md-sys-color-primary); }
+#network-status { display: block; color: var(--md-sys-color-on-surface-variant); font-size: 16px; line-height: 1.6; }
+.offline-actions { flex-shrink: 0; }
+.offline-panel summary { font-size: 16px; font-weight: 700; color: var(--md-sys-color-primary); min-height: 44px; padding-top: 15px; cursor: pointer; }
+.offline-panel details ul { padding-left: 18px; margin: 4px 0 10px; }
+.offline-panel details li, .offline-panel details p { font-size: 17px; line-height: 1.8; color: var(--md-sys-color-on-surface-variant); }
+.offline-panel details p { max-width: 760px; }
+.offline-remove { margin-top: 10px; }
+.offline-progress .offline-status:not(:empty) { font-size: 17px; line-height: 1.7; margin: 10px 0 0; color: var(--md-sys-color-on-surface-variant); }
+@media (max-width: 800px) { .offline-panel { width: calc(100% - 40px); } }
+@media (max-width: 520px) {
+  .offline-panel { width: calc(100% - 32px); padding: 14px; margin-top: 14px; border-radius: 14px; }
+  .offline-overview { flex-wrap: wrap; gap: 10px; }
+  .offline-actions { width: 100%; }
+  .offline-actions .button { width: 100%; min-height: 44px; font-size: 17px; }
+  #offline-ready { font-size: 17px; }
+  #network-status { font-size: 16px; }
+  .offline-panel summary { font-size: 16px; }
+  .offline-remove .button { font-size: 16px; }
+}
+
+.offline-panel { overflow-wrap: anywhere; }
+.offline-actions .button { max-width: 100%; min-height: 48px; font-size: 17px; white-space: normal; }
+.offline-remove .button { min-height: 48px; font-size: 16px; text-align: left; }
+@media (max-width: 800px) { .offline-overview { flex-wrap: wrap; align-items: flex-start; } }

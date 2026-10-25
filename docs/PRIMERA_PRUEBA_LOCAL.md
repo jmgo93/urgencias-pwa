@@ -46,16 +46,21 @@ La referencia más fiable para la presentación de tablas y algoritmos es el PDF
 
 ## Instalar y consultar sin conexión
 
-El botón **Instalar app** aparece si el navegador ofrece la instalación. También puedes utilizar su menú de instalación. En esta prueba, la dirección `localhost` pertenece al ordenador donde está funcionando el servidor; abrir esa misma dirección en el teléfono no accede al ordenador. La prueba móvil entre dispositivos requerirá una dirección HTTPS accesible que se preparará posteriormente.
+El botón **Instalar app** está disponible antes y después del desbloqueo. Si el navegador ofrece una instalación directa, la muestra; en los demás casos abre una guía para iPhone/iPad, Android y ordenador. Instala primero la app y ábrela desde su icono antes de importar tu biblioteca, para que quede guardada dentro de la app instalada.
 
-Para descargar el material:
+En esta prueba, la dirección `localhost` pertenece al ordenador donde funciona el servidor; esa misma dirección en el teléfono no accede al ordenador. Para el móvil utiliza [Urgencias en GitHub Pages](https://jmgo93.github.io/urgencias-pwa/) y sigue la [guía de traslado e instalación](TRASLADO_AL_MOVIL.md). La biblioteca se incorpora desde tu archivo personal; no se descarga del repositorio público.
 
-1. Desbloquea la biblioteca y pulsa **Guardar sin conexión**.
-2. Espera a que finalice. El conjunto cifrado ocupa aproximadamente **549 MiB**; el navegador necesita espacio adicional y puede solicitar conservar los datos.
-3. Comprueba que se muestra **Biblioteca guardada sin conexión**. La descarga es voluntaria y no se inicia por el mero hecho de buscar.
-4. Tras la descarga, la aplicación y el material pueden consultarse en el mismo navegador sin conexión al servidor, siempre que la caché se conserve. Necesitarás de nuevo la contraseña al recargar.
+El panel de disponibilidad sin conexión aparece incluso con la biblioteca bloqueada. Para preparar el ordenador local:
 
-Se guardan archivos cifrados; no se guarda la contraseña ni una copia persistente del texto descifrado. **Eliminar descargas** borra del navegador los paquetes de la biblioteca, sin borrar los originales de la carpeta de trabajo. La aplicación puede seguir abierta con la sesión activa hasta que la bloquees. El navegador también puede eliminar sus datos si falta espacio o si se borran manualmente.
+1. Con el servidor abierto, desbloquea la biblioteca una vez para cargar la información de `biblioteca-local/cifrado`. Si has importado el paquete `Biblioteca.urgencias` desde la app, puedes preparar el uso sin conexión antes de introducir la contraseña.
+2. Pulsa **Preparar uso sin conexión**. Si todavía no hay biblioteca disponible, se guardará la aplicación y se indicará que debes importar el archivo personal.
+3. Espera a que termine la comprobación y el guardado de los recursos que falten. El conjunto cifrado ocupa aproximadamente **549 MiB**; necesitas espacio adicional para los recursos de la app y el archivo del paquete si lo conservas en el dispositivo.
+4. Comprueba el estado **Lista para usar sin conexión**. Sólo aparece cuando están completos tanto la aplicación como la biblioteca. Abre **Ver qué está guardado en este dispositivo** para consultar los detalles.
+5. Para comprobarlo en este ordenador, cierra la ventana del servidor, recarga la app, introduce tu contraseña y realiza una búsqueda. Abre también un PDF que no hubieras consultado antes. La biblioteca completa está preparada, por lo que no depende de haber abierto previamente cada documento.
+
+Se guardan los archivos de la aplicación y la biblioteca cifrada; no se guarda la contraseña ni una copia persistente del texto descifrado. Tras cerrar, recargar o bloquear, podrás desbloquearla con la misma contraseña sin Internet, mientras se conserven sus datos locales.
+
+**Eliminar biblioteca del dispositivo** borra la copia cifrada guardada en la app y bloquea la sesión activa. La aplicación sigue instalada y los originales de la carpeta de trabajo o tu archivo personal no se borran. Conserva ese archivo como copia: el navegador también puede liberar almacenamiento o perder sus datos si los eliminas manualmente.
 
 Pulsa **Bloquear** al terminar. La aplicación también se bloquea tras 15 minutos sin actividad. El bloqueo vacía la búsqueda y cierra el lector.
 
@@ -65,10 +70,14 @@ Pulsa **Bloquear** al terminar. La aplicación también se bloquea tras 15 minut
 | --- | --- |
 | El lanzador indica que falta Node.js | Instala Node.js 22.13 o posterior antes de iniciar el servidor. |
 | Faltan dependencias o la compilación | Desde `repositorio-app`, ejecuta `npm ci`, `npm test` y `npm run build`. El lanzador no instala por su cuenta. |
-| El navegador no conecta | Mantén abierta la ventana del servidor y recarga la dirección completa con `/urgencias-pwa/`. |
+| El navegador no conecta en la primera prueba | Mantén abierta la ventana del servidor y recarga la dirección completa con `/urgencias-pwa/`. Cuando la app indique **Lista para usar sin conexión**, podrás volver a abrirla sin servidor. |
 | La contraseña no funciona | Copia de nuevo sólo el valor de `ACCESO_LOCAL.txt`; comprueba que se usa la carpeta `cifrado` correspondiente. |
-| La biblioteca no está disponible | Conserva `biblioteca-local/cifrado` junto a `repositorio-app`. No hace falta mover los paquetes a `dist`. |
-| La descarga sin conexión no termina | Comprueba el espacio del navegador. Puedes volver a pulsar para continuar o eliminar las descargas parciales. |
+| La biblioteca no está disponible | En local, conserva `biblioteca-local/cifrado` junto a `repositorio-app` y desbloquéala con el servidor abierto. En Pages o en la app instalada, importa tu archivo `Biblioteca.urgencias`. No muevas los paquetes a `dist`. |
+| No aparece un aviso de instalación del navegador | Pulsa **Instalar app** y sigue la guía para tu dispositivo. La ausencia de un aviso automático no impide utilizar la guía de instalación. |
+| La app instalada no encuentra una biblioteca que ya importaste en una pestaña | Abre la app desde su icono, importa el paquete allí y pulsa **Preparar uso sin conexión**. |
+| La preparación sin conexión no termina | Comprueba el espacio disponible y vuelve a pulsar **Preparar uso sin conexión** para completar los archivos que falten. Puedes usar **Eliminar biblioteca del dispositivo** para retirar la copia local y volver a importarla; esta acción bloquea la sesión. |
+| Indica que la aplicación está guardada pero falta la biblioteca | Importa tu paquete personal o, en local, desbloquea una vez la biblioteca con el servidor abierto. Vuelve a preparar hasta que aparezca **Lista para usar sin conexión**. |
+| Faltan archivos después de borrar datos o liberar espacio | Recupera la conexión para preparar la aplicación y vuelve a importar tu paquete. Comprueba de nuevo el estado antes de desconectarte. |
 | Un fragmento se lee mal | Abre la página del PDF y revisa el original, especialmente si lleva indicación OCR. |
 
 ## Regeneración opcional en este equipo
