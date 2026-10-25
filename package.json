@@ -1,0 +1,25 @@
+{
+  "name": "urgencias-pwa",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Biblioteca personal de urgencias: búsqueda documental local y lector de PDF cifrados.",
+  "scripts": {
+    "tokens": "node scripts/generate-tokens.mjs",
+    "build": "node scripts/vendor.mjs && vite build && node scripts/build-sw.mjs",
+    "start": "node scripts/serve.mjs",
+    "dev": "node scripts/serve.mjs",
+    "test": "node --test tests/*.test.js",
+    "prepare:library": "node scripts/encrypt-library.mjs",
+    "check:private": "node scripts/check-private.mjs"
+  },
+  "dependencies": {
+    "@fontsource/nunito": "5.2.7",
+    "@fontsource/poppins": "5.2.6",
+    "@material/material-color-utilities": "0.3.0",
+    "minisearch": "7.2.0",
+    "pdfjs-dist": "6.4.299"
+  },
+  "devDependencies": { "vite": "5.4.21" },
+  "engines": { "node": ">=22.13" }
+}

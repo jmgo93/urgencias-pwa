@@ -1,0 +1,61 @@
+/**
+ * Equivalencias de vocabulario para recuperar documentos, no reglas diagnósticas.
+ * Una sigla ambigua nunca se amplía automáticamente.
+ */
+export const CONCEPTS = Object.freeze([
+  { id: 'chest-pain', label: 'Dolor torácico', variants: ['dolor torácico', 'dolor precordial', 'chest pain'] },
+  { id: 'abdominal-pain', label: 'Dolor abdominal', variants: ['dolor abdominal', 'abdominal pain'] },
+  { id: 'headache', label: 'Cefalea', variants: ['cefalea', 'dolor de cabeza', 'headache'] },
+  { id: 'dyspnea', label: 'Disnea', variants: ['disnea', 'dificultad respiratoria', 'dyspnea', 'dyspnoea', 'shortness of breath'] },
+  { id: 'fever', label: 'Fiebre', variants: ['fiebre', 'febril', 'fever'] },
+  { id: 'syncope', label: 'Síncope', variants: ['síncope', 'syncope'] },
+  { id: 'seizure', label: 'Convulsión', variants: ['convulsión', 'convulsiones', 'crisis convulsiva', 'crisis convulsivas', 'seizure', 'seizures'] },
+  { id: 'cough', label: 'Tos', variants: ['tos', 'cough'] },
+  { id: 'hemoptysis', label: 'Hemoptisis', variants: ['hemoptisis', 'hemoptysis'] },
+  { id: 'vomiting', label: 'Vómitos', variants: ['vómito', 'vómitos', 'vomiting'] },
+  { id: 'diarrhea', label: 'Diarrea', variants: ['diarrea', 'diarrhea', 'diarrhoea'] },
+  { id: 'dizziness', label: 'Mareo', variants: ['mareo', 'mareos', 'dizziness'] },
+  { id: 'vertigo', label: 'Vértigo', variants: ['vértigo', 'vertigo'] },
+  { id: 'hypoglycemia', label: 'Hipoglucemia', variants: ['hipoglucemia', 'hypoglycemia', 'hypoglycaemia'] },
+  { id: 'hyperglycemia', label: 'Hiperglucemia', variants: ['hiperglucemia', 'hyperglycemia', 'hyperglycaemia'] },
+  { id: 'hypertension', label: 'Hipertensión arterial', variants: ['hipertensión arterial', 'hypertension', 'high blood pressure'] },
+  { id: 'hypotension', label: 'Hipotensión', variants: ['hipotensión', 'hypotension'] },
+  { id: 'tachycardia', label: 'Taquicardia', variants: ['taquicardia', 'tachycardia'] },
+  { id: 'bradycardia', label: 'Bradicardia', variants: ['bradicardia', 'bradycardia'] },
+  { id: 'heart-failure', label: 'Insuficiencia cardíaca', variants: ['insuficiencia cardíaca', 'insuficiencia cardiaca', 'heart failure'] },
+  { id: 'pulmonary-edema', label: 'Edema pulmonar', variants: ['edema pulmonar', 'edema agudo de pulmón', 'edema agudo pulmonar', 'pulmonary edema', 'pulmonary oedema'] },
+  { id: 'myocardial-infarction', label: 'Infarto de miocardio', variants: ['infarto de miocardio', 'infarto agudo de miocardio', 'iam', 'myocardial infarction'] },
+  { id: 'acute-coronary-syndrome', label: 'Síndrome coronario agudo', variants: ['síndrome coronario agudo', 'sca', 'acute coronary syndrome'] },
+  { id: 'pulmonary-embolism', label: 'Tromboembolia pulmonar', variants: ['tromboembolia pulmonar', 'tromboembolismo pulmonar', 'embolia pulmonar', 'tep', 'pulmonary embolism'] },
+  // DeCS: «Tromboembolismo use Tromboembolia». Generic term stays separate from pulmonary disease.
+  // https://decs.bvs.br/E/DeCS2015_Alfab-T.htm
+  { id: 'thromboembolism', label: 'Tromboembolia', variants: ['tromboembolia', 'tromboembolismo', 'thromboembolism'] },
+  { id: 'copd', label: 'EPOC', variants: ['epoc', 'enfermedad pulmonar obstructiva crónica', 'copd', 'chronic obstructive pulmonary disease'] },
+  { id: 'asthma', label: 'Asma', variants: ['asma', 'asthma'] },
+  { id: 'pneumonia', label: 'Neumonía', variants: ['neumonía', 'pneumonia'] },
+  { id: 'stroke', label: 'Ictus', variants: ['ictus', 'accidente cerebrovascular', 'stroke'] },
+  { id: 'acute-kidney-injury', label: 'Insuficiencia renal aguda', variants: ['insuficiencia renal aguda', 'lesión renal aguda', 'acute kidney injury', 'acute renal failure'] },
+  { id: 'respiratory-failure', label: 'Insuficiencia respiratoria', variants: ['insuficiencia respiratoria', 'respiratory failure'] },
+  { id: 'sepsis', label: 'Sepsis', variants: ['sepsis'] },
+  { id: 'anaphylaxis', label: 'Anafilaxia', variants: ['anafilaxia', 'anaphylaxis'] },
+  { id: 'meningitis', label: 'Meningitis', variants: ['meningitis'] },
+  { id: 'electrocardiogram', label: 'Electrocardiograma', variants: ['electrocardiograma', 'electrocardiografía', 'ecg', 'ekg', 'electrocardiogram'] },
+  { id: 'blood-gas', label: 'Gasometría', variants: ['gasometría', 'gasometría arterial', 'blood gas', 'arterial blood gas'] },
+  { id: 'hemoglobin', label: 'Hemoglobina', variants: ['hemoglobina', 'hemoglobin', 'haemoglobin'] },
+  { id: 'sodium', label: 'Sodio', variants: ['sodio', 'sodium'] },
+  { id: 'potassium', label: 'Potasio', variants: ['potasio', 'potassium'] },
+  { id: 'creatinine', label: 'Creatinina', variants: ['creatinina', 'creatinine'] },
+  { id: 'troponin', label: 'Troponina', variants: ['troponina', 'troponinas', 'troponin'] },
+  { id: 'ultrasound', label: 'Ecografía', variants: ['ecografía', 'ultrasonografía', 'ultrasound'] },
+  { id: 'radiography', label: 'Radiografía', variants: ['radiografía', 'radiografías', 'radiography', 'x ray'] },
+  { id: 'computed-tomography', label: 'Tomografía computarizada', variants: ['tomografía computarizada', 'tomografía axial computarizada', 'tac', 'computed tomography'] },
+  { id: 'cpr', label: 'Reanimación cardiopulmonar', variants: ['reanimación cardiopulmonar', 'resucitación cardiopulmonar', 'rcp', 'cardiopulmonary resuscitation', 'cpr'] },
+]);
+
+export const AMBIGUOUS_ACRONYMS = Object.freeze({
+  pcr: 'PCR: sigla ambigua; se busca literalmente. Precisa «parada cardiorrespiratoria», «proteína C reactiva» o «reacción en cadena de la polimerasa» según lo que buscas.',
+  ira: 'IRA: puede aludir a insuficiencia renal aguda o insuficiencia respiratoria aguda. Se busca literalmente; escribe el término completo para ampliar la búsqueda.',
+  ir: 'IR: sigla ambigua; se busca literalmente. Escribe el término completo para ampliar la búsqueda.',
+  fa: 'FA: sigla ambigua; se busca literalmente. Escribe el término completo para ampliar la búsqueda.',
+  ta: 'TA: sigla ambigua; se busca literalmente. Escribe el término completo para ampliar la búsqueda.',
+});

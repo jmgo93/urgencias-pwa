@@ -1,14 +1,4 @@
-# Lista permitida del repositorio documental inicial.
-# Añadir código futuro requiere ampliar esta lista de forma explícita.
-*
-!/.gitignore
-!/README.md
-!/docs/
-!/docs/*.md
-!/docs/plan/
-!/docs/plan/*.md
-
-# Exclusiones explícitas de secretos y corpus personal.
+# La biblioteca personal vive FUERA de esta carpeta.
 .env
 .env.*
 *.pem
@@ -28,3 +18,16 @@
 /tmp/
 /node_modules/
 /dist/
+/public/vendor/
+/coverage/
+/test-results/
+/library/
+/biblioteca-local/
+*.bin
+*.urgencias
+corpus.json
+bootstrap.json
+ACCESO_LOCAL.txt
+npm-debug.log*
+__pycache__/
+*.pyc
