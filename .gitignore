@@ -1,0 +1,30 @@
+# Lista permitida del repositorio documental inicial.
+# Añadir código futuro requiere ampliar esta lista de forma explícita.
+*
+!/.gitignore
+!/README.md
+!/docs/
+!/docs/*.md
+!/docs/plan/
+!/docs/plan/*.md
+
+# Exclusiones explícitas de secretos y corpus personal.
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.pdf
+*.PDF
+*.zip
+*.7z
+*.tar
+*.gz
+/Libro dividido/
+/corpus-personal/
+/biblioteca-personal/
+/private/
+/tmp/
+/node_modules/
+/dist/
