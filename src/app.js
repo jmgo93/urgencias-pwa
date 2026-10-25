@@ -12,6 +12,7 @@ import { inspectBundle, verifyBundleEntry } from './bundle.js';
 import { reconstructPage } from './page-text.js';
 import { disposePDFTask } from './pdf-lifecycle.js';
 import { setupInstallation } from './install.js';
+import { saveDeviceAccess, loadDeviceAccess, forgetDeviceAccess } from './device-access.js';
 import { libraryCacheName, getActiveLibraryManifest, saveLibraryManifest, inspectLibraryCache,
   getLibraryAssetResponse, fetchWithTimeout, CONTROL_CACHE, LIBRARY_PREFIX } from './offline.js';
 import pdfWorkerURL from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
@@ -64,10 +65,12 @@ let offlineAbort;
 let importingLibrary = false;
 let availabilityGeneration = 0;
 let serviceWorkerRegistration;
+let openingLibrary = false;
+let restoringDevice = false;
 
 function touchSession() {
   clearTimeout(lockTimer);
-  if (session) lockTimer = setTimeout(() => lock('La biblioteca se ha bloqueado tras 15 minutos sin actividad.'), 15 * 60 * 1000);
+  if (session && !session.remembered) lockTimer = setTimeout(() => lock('La biblioteca se ha bloqueado tras 15 minutos sin actividad.'), 15 * 60 * 1000);
 }
 for (const event of ['pointerdown', 'keydown']) document.addEventListener(event, touchSession, { passive: true });
 
@@ -103,16 +106,23 @@ async function readAsset(id, activeSession = session) {
 
 e.unlockForm.addEventListener('submit', async event => {
   event.preventDefault();
+  await openLibrary({ password: e.password.value, remember: e.rememberDevice.checked });
+});
+async function openLibrary({ password, savedKey, knownManifest, remember = false } = {}) {
+  if (openingLibrary || importingLibrary || session || (restoringDevice && !savedKey)) return;
+  openingLibrary = true;
   e.unlockButton.disabled = true;
-  e.unlockStatus.textContent = 'Abriendo la biblioteca protegida…';
-  let password = e.password.value;
+  e.rememberDevice.disabled = true;
+  document.querySelector('#import-library-button').disabled = true;
+  e.deviceAccessStatus.textContent = '';
+  e.unlockStatus.textContent = savedKey ? 'Abriendo la biblioteca de este dispositivo…' : 'Abriendo la biblioteca protegida…';
   e.password.value = '';
   let active;
   try {
-    manifest = await loadManifest();
-    const key = await deriveLibraryKey(password, manifest.kdf);
+    manifest = knownManifest ?? await loadManifest();
+    const key = savedKey ?? await deriveLibraryKey(password, manifest.kdf);
     password = undefined;
-    active = { key, manifest, corpus: null, worker: null };
+    active = { key, manifest, corpus: null, worker: null, remembered: Boolean(savedKey) };
     session = active;
     const bytes = await readAsset('corpus', active);
     const corpus = JSON.parse(new TextDecoder().decode(bytes));
@@ -137,6 +147,20 @@ e.unlockForm.addEventListener('submit', async event => {
     e.sectionFilter.innerHTML = '<option value="">Todas las secciones</option>' + corpus.sections.map(section => `<option value="${escapeHtml(section.id)}">${escapeHtml(section.title)}</option>`).join('');
     e.libraryTitle.textContent = `${corpus.documents.length} documentos · ${corpus.sourcePageCount} páginas`;
     e.offlineButton.title = `Descarga cifrada: ${formatBytes(manifest.totalBytes)}`;
+    if (!savedKey) {
+      try {
+        if (remember) { await saveDeviceAccess(manifest, key); active.remembered = true; }
+        else await forgetDeviceAccess();
+      } catch (error) {
+        active.forgetRequired = !remember;
+        e.deviceAccessStatus.textContent = remember
+          ? 'La biblioteca está abierta, pero no se pudo recordar este dispositivo. Tendrás que introducir la contraseña la próxima vez.'
+          : error.message;
+      }
+    }
+    if (session !== active) return;
+    if (active.remembered) e.deviceAccessStatus.textContent = 'Dispositivo recordado. La biblioteca se abrirá automáticamente, también sin conexión.';
+    e.lockButton.querySelector('span').textContent = active.remembered || active.forgetRequired ? 'Olvidar este dispositivo' : 'Bloquear';
     e.unlockStatus.textContent = '';
     ui.setLocked(false);
     history.replaceState({}, '', base.pathname);
@@ -148,12 +172,38 @@ e.unlockForm.addEventListener('submit', async event => {
     password = undefined;
     active?.worker?.terminate();
     session = undefined;
-    e.unlockStatus.textContent = manifest
+    e.unlockStatus.textContent = savedKey ? 'No se pudo abrir el acceso recordado. Introduce la contraseña para volver a abrir la biblioteca.' : manifest
       ? 'No se ha podido abrir. Comprueba la contraseña y que la biblioteca esté disponible.'
       : 'Importa primero tu archivo Biblioteca.urgencias para activar el buscador.';
     e.password.focus();
-  } finally { e.unlockButton.disabled = false; }
-});
+  } finally {
+    password = undefined;
+    savedKey = undefined;
+    openingLibrary = false;
+    e.unlockButton.disabled = false;
+    e.rememberDevice.disabled = false;
+    document.querySelector('#import-library-button').disabled = false;
+  }
+}
+async function restoreDeviceAccess() {
+  if (openingLibrary || importingLibrary || session || restoringDevice) return;
+  restoringDevice = true;
+  e.unlockButton.disabled = true;
+  e.rememberDevice.disabled = true;
+  document.querySelector('#import-library-button').disabled = true;
+  try {
+    const local = await getActiveLibraryManifest(base);
+    if (!local) return;
+    const key = await loadDeviceAccess(validateManifest(local));
+    if (key) await openLibrary({ savedKey: key, knownManifest: local, remember: true });
+  } catch { /* The password form remains available when device access cannot be restored. */ }
+  finally {
+    restoringDevice = false;
+    e.unlockButton.disabled = false;
+    e.rememberDevice.disabled = false;
+    document.querySelector('#import-library-button').disabled = false;
+  }
+}
 
 function onSearchMessage({ data }) {
   if (!session || data.requestId !== queryRequest) return;
@@ -390,13 +440,25 @@ async function lock(message = '') {
   e.emptyState.hidden = false;
   ui.setSearchBusy(false);
   ui.setLocked(true);
+  e.deviceAccessStatus.textContent = '';
+  e.lockButton.querySelector('span').textContent = 'Bloquear';
   e.unlockStatus.textContent = typeof message === 'string' ? message : '';
   history.replaceState({}, '', base.pathname);
   window.scrollTo(0, 0);
   e.password.focus();
   updateOfflineState();
 }
-e.lockButton.addEventListener('click', () => lock());
+e.lockButton.addEventListener('click', async () => {
+  e.lockButton.disabled = true;
+  try {
+    if (session?.remembered || session?.forgetRequired) {
+      await forgetDeviceAccess();
+      await lock('Este dispositivo se ha olvidado. La próxima vez tendrás que introducir la contraseña.');
+    } else await lock();
+  } catch {
+    e.deviceAccessStatus.textContent = 'No se pudo olvidar este dispositivo. Vuelve a intentarlo antes de dejar de usarlo.';
+  } finally { e.lockButton.disabled = false; }
+});
 
 document.querySelector('#library-file').addEventListener('change', async event => {
   const file = event.target.files?.[0];
@@ -568,11 +630,16 @@ e.offlineButton.addEventListener('click', async () => {
 });
 e.removeOfflineButton?.addEventListener('click', async () => {
   if (importingLibrary || offlineAbort) return;
-  offlineAbort?.abort();
-  for (const name of await caches.keys()) if (name.startsWith(LIBRARY_PREFIX) || name === CONTROL_CACHE) await caches.delete(name);
-  await lock('Biblioteca retirada del dispositivo. Importa tu archivo para volver a consultarla.');
-  e.offlineStatus.textContent = 'Biblioteca eliminada de este dispositivo. La aplicación sigue instalada.';
-  e.removeOfflineButton.hidden = true;
+  e.removeOfflineButton.disabled = true;
+  try {
+    await forgetDeviceAccess();
+    for (const name of await caches.keys()) if (name.startsWith(LIBRARY_PREFIX) || name === CONTROL_CACHE) await caches.delete(name);
+    await lock('Biblioteca retirada del dispositivo. Importa tu archivo para volver a consultarla.');
+    e.offlineStatus.textContent = 'Biblioteca eliminada de este dispositivo. La aplicación sigue instalada.';
+    e.removeOfflineButton.hidden = true;
+  } catch {
+    e.offlineStatus.textContent = 'No se pudo retirar la biblioteca y su acceso guardado. Vuelve a intentarlo.';
+  } finally { e.removeOfflineButton.disabled = false; }
 });
 if ('serviceWorker' in navigator) {
   serviceWorkerRegistration = navigator.serviceWorker.register(new URL('sw.js', base), { scope: base.pathname })
@@ -591,3 +658,4 @@ window.addEventListener('focus', updateOfflineState);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) updateOfflineState(); });
 ui.setLocked(true);
 updateOfflineState();
+restoreDeviceAccess();

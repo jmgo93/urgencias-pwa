@@ -8,7 +8,7 @@ La aplicación y la biblioteca ya están preparadas en este equipo. No necesitas
 2. El navegador abrirá [http://localhost:4173/urgencias-pwa/](http://localhost:4173/urgencias-pwa/). Si la página se abre antes de arrancar el servidor, recárgala una vez.
 3. Deja abierta la ventana del servidor. Puedes minimizarla; al cerrarla se detiene el servicio local.
 4. Abre `biblioteca-local/ACCESO_LOCAL.txt`, copia únicamente el valor que aparece tras «Contraseña:» y pégalo en la aplicación.
-5. Pulsa **Desbloquear biblioteca** y espera a que se prepare el buscador. La contraseña se borra del formulario y no queda guardada por la aplicación.
+5. En tu equipo personal, deja marcada **Recordar este dispositivo**, pulsa **Desbloquear biblioteca** y espera a que se prepare el buscador. La contraseña se borra del formulario y no se guarda. La app conserva una clave de acceso local para abrir la biblioteca sin volver a pedirla, también sin conexión.
 
 Si ya hay un servidor en el puerto 4173, el lanzador abrirá la misma dirección sin crear otro. Si el navegador no muestra Urgencias, puede haber otra aplicación utilizando ese puerto.
 
@@ -56,13 +56,13 @@ El panel de disponibilidad sin conexión aparece incluso con la biblioteca bloqu
 2. Pulsa **Preparar uso sin conexión**. Si todavía no hay biblioteca disponible, se guardará la aplicación y se indicará que debes importar el archivo personal.
 3. Espera a que termine la comprobación y el guardado de los recursos que falten. El conjunto cifrado ocupa aproximadamente **549 MiB**; necesitas espacio adicional para los recursos de la app y el archivo del paquete si lo conservas en el dispositivo.
 4. Comprueba el estado **Lista para usar sin conexión**. Sólo aparece cuando están completos tanto la aplicación como la biblioteca. Abre **Ver qué está guardado en este dispositivo** para consultar los detalles.
-5. Para comprobarlo en este ordenador, cierra la ventana del servidor, recarga la app, introduce tu contraseña y realiza una búsqueda. Abre también un PDF que no hubieras consultado antes. La biblioteca completa está preparada, por lo que no depende de haber abierto previamente cada documento.
+5. Para comprobarlo en este ordenador, cierra la ventana del servidor y recarga la app. Si has recordado el dispositivo, la biblioteca se abrirá directamente; si no, introduce tu contraseña. Realiza una búsqueda y abre un PDF que no hubieras consultado antes. La biblioteca completa está preparada, por lo que no depende de haber abierto previamente cada documento.
 
-Se guardan los archivos de la aplicación y la biblioteca cifrada; no se guarda la contraseña ni una copia persistente del texto descifrado. Tras cerrar, recargar o bloquear, podrás desbloquearla con la misma contraseña sin Internet, mientras se conserven sus datos locales.
+Se guardan los archivos de la aplicación y la biblioteca cifrada; no se guarda la contraseña ni una copia persistente del texto descifrado. Si marcas **Recordar este dispositivo**, se conserva una clave de acceso local para abrir automáticamente al cerrar y volver a entrar, mientras se conserven sus datos. Actívalo sólo en tu equipo personal.
 
 **Eliminar biblioteca del dispositivo** borra la copia cifrada guardada en la app y bloquea la sesión activa. La aplicación sigue instalada y los originales de la carpeta de trabajo o tu archivo personal no se borran. Conserva ese archivo como copia: el navegador también puede liberar almacenamiento o perder sus datos si los eliminas manualmente.
 
-Pulsa **Bloquear** al terminar. La aplicación también se bloquea tras 15 minutos sin actividad. El bloqueo vacía la búsqueda y cierra el lector.
+En un dispositivo recordado, **Olvidar este dispositivo** elimina la clave de acceso guardada y cierra la sesión; mantiene la biblioteca cifrada, por lo que basta con introducir la contraseña para recuperarla, incluso sin Internet. Si prefieres acceso sólo durante la sesión, desmarca **Recordar este dispositivo** al desbloquear. En ese caso el botón se llama **Bloquear**, la clave queda sólo en memoria y se aplica el bloqueo tras 15 minutos sin actividad. No hay bloqueo por inactividad cuando el dispositivo está recordado. El bloqueo vacía la búsqueda y cierra el lector.
 
 ## Si algo no abre
 
@@ -72,6 +72,7 @@ Pulsa **Bloquear** al terminar. La aplicación también se bloquea tras 15 minut
 | Faltan dependencias o la compilación | Desde `repositorio-app`, ejecuta `npm ci`, `npm test` y `npm run build`. El lanzador no instala por su cuenta. |
 | El navegador no conecta en la primera prueba | Mantén abierta la ventana del servidor y recarga la dirección completa con `/urgencias-pwa/`. Cuando la app indique **Lista para usar sin conexión**, podrás volver a abrirla sin servidor. |
 | La contraseña no funciona | Copia de nuevo sólo el valor de `ACCESO_LOCAL.txt`; comprueba que se usa la carpeta `cifrado` correspondiente. |
+| Vuelve a pedir la contraseña en un dispositivo recordado | Comprueba que abres la misma app y el mismo navegador. Si borraste sus datos o pulsaste **Olvidar este dispositivo**, introduce la contraseña una vez y vuelve a marcar **Recordar este dispositivo**. |
 | La biblioteca no está disponible | En local, conserva `biblioteca-local/cifrado` junto a `repositorio-app` y desbloquéala con el servidor abierto. En Pages o en la app instalada, importa tu archivo `Biblioteca.urgencias`. No muevas los paquetes a `dist`. |
 | No aparece un aviso de instalación del navegador | Pulsa **Instalar app** y sigue la guía para tu dispositivo. La ausencia de un aviso automático no impide utilizar la guía de instalación. |
 | La app instalada no encuentra una biblioteca que ya importaste en una pestaña | Abre la app desde su icono, importa el paquete allí y pulsa **Preparar uso sin conexión**. |

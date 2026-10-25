@@ -387,6 +387,16 @@ button, input, select { font-size: 17px; }
 .icon-button { width: 44px; height: 44px; min-width: 44px; min-height: 44px; }
 .password-field input, .query-field input { font-size: 18px; min-height: 44px; }
 #unlock-form label { font-size: 16px; }
+.remember-device-option { margin-top: 16px; padding: 10px 12px 14px; border-radius: 12px; background: var(--md-sys-color-surface-container); }
+#unlock-form .remember-device { display: flex; align-items: center; gap: 12px; min-height: 48px; margin: 0; font-size: 17px; line-height: 1.5; cursor: pointer; }
+.remember-device input { width: 24px; height: 24px; flex-shrink: 0; margin: 0; accent-color: var(--md-sys-color-primary); cursor: pointer; }
+.remember-device span { min-width: 0; overflow-wrap: anywhere; }
+#remember-device-help { margin-top: 6px; font-size: 17px; line-height: 1.65; color: var(--md-sys-color-on-surface-variant); }
+.session-actions { max-width: 100%; }
+#lock-button { max-width: 100%; white-space: normal; text-align: center; }
+#lock-button span { min-width: 0; overflow-wrap: anywhere; }
+.device-access-status { width: min(var(--layout-width), calc(100% - 80px)); margin: 12px auto 0; padding: 12px 16px; border-radius: 12px; background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); font-size: 17px; line-height: 1.65; overflow-wrap: anywhere; }
+.device-access-status:empty { display: none; }
 .select-wrap select { min-height: 44px; font-size: 17px; }
 .reader-paging input { width: 58px; min-height: 44px; font-size: 17px; }
 .intro-copy, .unlock-card > p, .search-heading > div > p { font-size: 18px; line-height: 1.7; }
@@ -405,6 +415,7 @@ button, input, select { font-size: 17px; }
 .suggestion-nav, .suggestion-nav > span { font-size: 16px; }
 .badge, .badge-warning { font-size: 14px; white-space: normal; }
 @media (max-width: 800px) {
+  .device-access-status { width: calc(100% - 40px); }
   .app-header { flex-wrap: wrap; padding-top: 16px; padding-bottom: 16px; gap: 12px; }
   .header-right { max-width: 100%; flex-wrap: wrap; }
   .session-actions { flex-wrap: wrap; }
@@ -433,6 +444,7 @@ button, input, select { font-size: 17px; }
   .app-footer { font-size: 14px; line-height: 1.6; }
 }
 @media (max-width: 520px) {
+  .device-access-status { width: calc(100% - 32px); }
   .brand-name { font-size: 24px; }
   .brand-caption { font-size: 11px; letter-spacing: .6px; }
   .brand-symbol { width: 40px; height: 42px; }
