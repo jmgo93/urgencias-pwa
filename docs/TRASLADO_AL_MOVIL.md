@@ -13,9 +13,11 @@ La aplicación publicada contiene el buscador y el lector. Tu libro se incorpora
 
 4. **Prepara el uso sin conexión.** Pulsa **Preparar uso sin conexión**. Espera al estado **Lista para usar sin conexión** antes de cerrar la app o desconectar Internet. Este paso prepara los recursos de la aplicación y comprueba la biblioteca cifrada guardada en el dispositivo. No descarga el libro desde GitHub.
 
-5. **Desbloquea tu biblioteca.** Consulta la contraseña en el archivo privado `biblioteca-local/ACCESO_LOCAL.txt` del ordenador e introdúcela en la app. El paquete no contiene la contraseña y la app no la guarda. Al cerrar, recargar o bloquear tendrás que introducirla otra vez; funciona también sin conexión.
+5. **Introduce la contraseña una vez.** Consulta la contraseña en el archivo privado `biblioteca-local/ACCESO_LOCAL.txt` del ordenador e introdúcela en la app. En tu móvil personal, deja marcada **Recordar este dispositivo**. La app guarda una clave de acceso local, sin almacenar la contraseña, para abrir la biblioteca directamente las siguientes veces. El paquete no contiene la contraseña; consérvala por separado.
 
-6. **Compruébalo en tu móvil.** Una vez que indique que está lista, activa el modo avión, cierra y vuelve a abrir Urgencias desde su icono. Desbloquea la biblioteca, realiza una búsqueda y abre un PDF que todavía no hayas consultado. Así comprobarás la preparación en tu dispositivo.
+6. **Compruébalo en tu móvil.** Una vez que indique que está lista, activa el modo avión, cierra y vuelve a abrir Urgencias desde su icono. Si has recordado el dispositivo, se abrirá sin volver a pedir la contraseña. Realiza una búsqueda y abre un PDF que todavía no hayas consultado. Así comprobarás la preparación en tu dispositivo.
+
+**Olvidar este dispositivo** borra la clave de acceso guardada y cierra la sesión; conserva la biblioteca cifrada. La siguiente vez tendrás que introducir la contraseña, que también funciona sin Internet. Si desmarcas **Recordar este dispositivo** al desbloquear, la clave se mantiene sólo durante esa sesión y la app se bloquea tras 15 minutos sin actividad. En un dispositivo recordado no se aplica ese bloqueo automático. Activa el recuerdo sólo en un dispositivo personal: cualquiera que pueda usar esa app podrá abrir su biblioteca.
 
 Conserva el paquete personal como copia. El navegador o el sistema pueden liberar almacenamiento; borrar los datos de la app también elimina su biblioteca local. Si faltan archivos, recupera la conexión para preparar la app e importa de nuevo tu paquete. **Eliminar biblioteca del dispositivo** permite borrar voluntariamente la copia guardada en la app.
 

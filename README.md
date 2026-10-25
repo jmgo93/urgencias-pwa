@@ -4,13 +4,13 @@ Biblioteca personal de consulta documental: escribe una frase, compara los fragm
 
 La primera versión funciona sin backend ni base de datos. Repositorio: [jmgo93/urgencias-pwa](https://github.com/jmgo93/urgencias-pwa). Aplicación: [Urgencias en GitHub Pages](https://jmgo93.github.io/urgencias-pwa/); el estado del despliegue se comprueba en Actions.
 
-Para usar el libro en el móvil, **instala primero la app y ábrela desde su icono**. Importa entonces el paquete privado `Biblioteca.urgencias` desde la app instalada, pulsa **Preparar uso sin conexión** y espera al estado **Lista para usar sin conexión**. Podrás desbloquear la biblioteca con tu contraseña, buscar y abrir los PDF sin Internet. La importación es local: no sube el archivo a GitHub. [Guía para el móvil](docs/TRASLADO_AL_MOVIL.md).
+Para usar el libro en el móvil, **instala primero la app y ábrela desde su icono**. Importa entonces el paquete privado `Biblioteca.urgencias` desde la app instalada, pulsa **Preparar uso sin conexión** y espera al estado **Lista para usar sin conexión**. Introduce la contraseña una vez y deja marcado **Recordar este dispositivo**: después la biblioteca se abrirá directamente, incluso sin Internet. La importación es local: no sube el archivo a GitHub. [Guía para el móvil](docs/TRASLADO_AL_MOVIL.md).
 
 ## Probar la versión preparada
 
 1. Abre **Abrir Urgencias.cmd**, situado en la carpeta de trabajo, junto a `repositorio-app` y `biblioteca-local`.
 2. Se abrirá [la aplicación local](http://localhost:4173/urgencias-pwa/). Mantén abierta la ventana del servidor mientras consultas la biblioteca.
-3. Copia la contraseña de `biblioteca-local/ACCESO_LOCAL.txt` y pulsa **Desbloquear biblioteca**. Ese archivo está fuera del repositorio y no se sirve a través de la web.
+3. Copia la contraseña de `biblioteca-local/ACCESO_LOCAL.txt`, deja marcado **Recordar este dispositivo** si es tu equipo personal y pulsa **Desbloquear biblioteca**. Ese archivo está fuera del repositorio y no se sirve a través de la web.
 4. Prueba «disnea dolor torácico» o «gasometría acidosis», abre un resultado y utiliza **Volver a resultados** para recuperar la búsqueda.
 
 La [guía de primera prueba](docs/PRIMERA_PRUEBA_LOCAL.md) explica los controles, la instalación y el uso sin conexión.
@@ -21,7 +21,7 @@ La [guía de primera prueba](docs/PRIMERA_PRUEBA_LOCAL.md) explica los controles
 - Filtros por sección y por capítulos o casos, con conexiones explicadas, coincidencias y términos ausentes en cada fragmento.
 - Lector de PDF con página original y página del documento pequeño, navegación, zoom y texto extraído. Conserva consulta, filtros, resultados y posición al volver.
 - Biblioteca local de **244 PDF: 198 capítulos, 45 casos y un documento de preliminares**, que cubren las **1.101 páginas** del libro. Las **32 páginas con OCR** están identificadas.
-- Catálogo, texto y PDF cifrados; desbloqueo local con contraseña, bloqueo manual y tras 15 minutos de inactividad. La clave de la sesión se mantiene en memoria.
+- Catálogo, texto y PDF cifrados; contraseña inicial y apertura automática en un dispositivo recordado. **Olvidar este dispositivo** retira el acceso guardado y cierra la sesión sin borrar la biblioteca. Si se desmarca **Recordar este dispositivo**, la clave queda sólo en memoria y vuelve el bloqueo tras 15 minutos de inactividad.
 - PWA instalable con recursos locales y diseño basado en Material 3. El botón **Instalar app** está disponible antes del desbloqueo: ofrece la instalación del navegador o instrucciones para iPhone/iPad, Android y ordenador.
 - Preparación explícita del uso sin conexión, con estado visible de los recursos de la app y de la biblioteca cifrada guardada en el dispositivo.
 
@@ -55,13 +55,13 @@ La extracción conserva las páginas originales sin reducir su resolución. Eso 
 
 ## Información personal y publicación
 
-El código compilado de `dist` excluye el libro, los PDF, las transcripciones, el corpus, los paquetes cifrados y las contraseñas. El servidor local conecta ese código con la carpeta personal externa. En Pages, la biblioteca se importa desde un único archivo `.urgencias` del dispositivo, por bloques y sin cargar el paquete entero en memoria. Se verifican sus archivos y se guardan sólo los datos cifrados.
+El código compilado de `dist` excluye el libro, los PDF, las transcripciones, el corpus, los paquetes cifrados y las contraseñas. El servidor local conecta ese código con la carpeta personal externa. En Pages, la biblioteca se importa desde un único archivo `.urgencias` del dispositivo, por bloques y sin cargar el paquete entero en memoria. Se verifican sus archivos y se guarda la biblioteca cifrada. Al recordar el dispositivo, se conserva además una clave de acceso `CryptoKey` local en IndexedDB; la contraseña no se almacena ni se envía a un servidor. Quien tenga acceso a ese navegador podrá abrir la biblioteca mientras el dispositivo siga recordado.
 
 El contenido permanece local; cambiar su formato o cifrarlo no concede derechos de distribución. [Separación de archivos personales](docs/ARCHIVOS_PERSONALES.md).
 
 Para crear el archivo que se traslada al móvil, ejecuta `node scripts/pack-library.mjs` después del cifrado. El paquete se genera fuera del repositorio en `biblioteca-local/Para el movil/Biblioteca.urgencias` y no contiene la contraseña. La publicación del código se lanza manualmente con el flujo **Publicar en GitHub Pages**. [Configuración de Pages](docs/PUBLICACION_PAGES.md).
 
-Para el funcionamiento sin conexión, pulsa **Preparar uso sin conexión** y espera al estado **Lista para usar sin conexión**. La importación necesita espacio para unos 549 MiB de biblioteca cifrada, además del archivo personal y los recursos de la aplicación. La biblioteca se incorpora desde tu archivo; no se descarga de GitHub. Al recargar, cerrar o bloquear se vuelve a pedir la contraseña, que también funciona sin conexión. El navegador puede liberar almacenamiento; conserva el archivo original y usa **Eliminar biblioteca del dispositivo** si deseas borrar la copia guardada en la app. Si instalas la app después de haber usado el navegador, comprueba su estado e importa la biblioteca desde la app instalada cuando sea necesario.
+Para el funcionamiento sin conexión, pulsa **Preparar uso sin conexión** y espera al estado **Lista para usar sin conexión**. La importación necesita espacio para unos 549 MiB de biblioteca cifrada, además del archivo personal y los recursos de la aplicación. La biblioteca se incorpora desde tu archivo; no se descarga de GitHub. Con **Recordar este dispositivo**, puedes cerrar y volver a abrir sin repetir la contraseña y sin bloqueo por inactividad. **Olvidar este dispositivo** borra la clave guardada y mantiene la biblioteca cifrada; la siguiente apertura pedirá la contraseña, también válida sin conexión. Si no recuerdas el dispositivo, se pide al iniciar otra sesión y se aplica el bloqueo de 15 minutos. El navegador puede liberar almacenamiento; conserva el archivo original y usa **Eliminar biblioteca del dispositivo** si deseas borrar la copia guardada en la app. Si instalas la app después de haber usado el navegador, comprueba su estado e importa la biblioteca desde la app instalada cuando sea necesario.
 
 ## Plan de evolución
 

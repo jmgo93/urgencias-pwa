@@ -8,7 +8,8 @@ La aplicación puede abrir el buscador y los PDF sin Internet después de prepar
 2. Instala la aplicación. En Android, utiliza **Instalar app** cuando aparezca o la opción de instalación del menú del navegador. En iPhone o iPad, utiliza **Compartir → Añadir a pantalla de inicio** en Safari. Los nombres pueden variar según el navegador. [Guía de instalación de MDN](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/Installing).
 3. Abre Urgencias desde el icono instalado y pulsa **Importar biblioteca del dispositivo**. Selecciona tu archivo privado `Biblioteca.urgencias`, de aproximadamente **576 MB**. No se envía a GitHub ni a ningún servidor.
 4. Espera a que termine la importación y utiliza **Preparar uso sin conexión** para comprobar que estén guardados el buscador, el lector y todos los documentos. Espera al estado **Lista para usar sin conexión**. Esta comprobación no necesita la contraseña: trabaja con los archivos cifrados.
-5. Haz la prueba descrita a continuación antes de depender de la consulta sin cobertura.
+5. Introduce la contraseña de la biblioteca una vez y deja marcada **Recordar este dispositivo** si se trata de tu móvil personal. La app conserva una clave de acceso local, sin guardar la contraseña, para abrir directamente las siguientes veces.
+6. Haz la prueba descrita a continuación antes de depender de la consulta sin cobertura.
 
 La importación conserva una copia cifrada dentro del almacenamiento de la aplicación. El archivo original sigue siendo útil como copia de recuperación. Se necesita espacio para ambos mientras estén en el teléfono, además de los recursos de la aplicación. No importes el paquete en navegación privada: sus datos suelen desaparecer al cerrar esa sesión. [Almacenamiento de navegadores, MDN](https://developer.mozilla.org/en-US/docs/Web/API/Storage_API/Storage_quotas_and_eviction_criteria).
 
@@ -16,10 +17,16 @@ La importación conserva una copia cifrada dentro del almacenamiento de la aplic
 
 1. Espera la confirmación de que la preparación ha terminado.
 2. Cierra la aplicación, activa el modo avión y vuelve a abrirla desde su icono.
-3. Introduce la contraseña de tu biblioteca. No necesita conexión y vuelve a pedirse al iniciar una sesión. El paquete no incluye la contraseña; consérvala por separado.
+3. La biblioteca se abrirá directamente si has recordado este dispositivo. Si no lo has hecho, introduce su contraseña, que también funciona sin conexión. El paquete no incluye la contraseña; consérvala por separado.
 4. Busca una frase y abre un capítulo que no hayas consultado antes. Cambia de página, vuelve a los resultados y abre otra sugerencia.
 
-El buscador utiliza el índice local. El lector abre únicamente el PDF pequeño elegido, también desde este dispositivo. La biblioteca sigue protegida al bloquear la aplicación; la copia guardada permanece cifrada.
+El buscador utiliza el índice local. El lector abre únicamente el PDF pequeño elegido, también desde este dispositivo. La copia guardada permanece cifrada; recordar el dispositivo permite abrirla mediante su clave local. Utiliza esta opción sólo en un dispositivo personal, porque quien pueda usar esa app podrá consultar la biblioteca.
+
+## Recordar u olvidar el acceso
+
+**Recordar este dispositivo** está marcado inicialmente y evita repetir la contraseña al cerrar, recargar y volver a abrir, también sin Internet. La app conserva una clave de acceso local; no guarda el texto de la contraseña. No aplica bloqueo por inactividad mientras el dispositivo esté recordado.
+
+**Olvidar este dispositivo** borra esa clave y cierra la sesión sin eliminar la biblioteca cifrada. En la siguiente apertura se pedirá de nuevo la contraseña. Si desmarcas **Recordar este dispositivo** al desbloquear, la clave dura sólo esa sesión y vuelve el bloqueo tras 15 minutos sin actividad; puedes usar **Bloquear** para cerrarla antes.
 
 ## Conservación y recuperación
 

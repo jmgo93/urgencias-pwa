@@ -74,6 +74,7 @@ export function mountUI(root) {
       <div class="brand"><span class="brand-symbol">${icon('book')}</span><div><span class="brand-name">urgencias<span class="brand-dot">.</span></span><span class="brand-caption">TU BIBLIOTECA PERSONAL</span></div></div>
       <div class="header-right"><span class="local-badge"><span class="status-dot"></span>Versión local</span><button id="install-button" class="button button-tonal button-compact" type="button" aria-haspopup="dialog">Instalar app</button><div id="session-actions" class="session-actions" hidden><button id="offline-button" class="button button-text button-compact" type="button">Guardar sin conexión</button><button id="remove-offline-button" class="button button-text button-compact" type="button" hidden>Eliminar descargas</button><button id="lock-button" class="button button-tonal button-compact" type="button">${icon('lock')}<span>Bloquear</span></button></div></div>
     </header>
+    <p id="device-access-status" class="device-access-status" role="status" aria-live="polite"></p>
     <main id="main-content" class="main-content">
       <section id="lock-view" class="lock-view" aria-labelledby="lock-title">
         <div class="lock-intro">
@@ -87,10 +88,10 @@ export function mountUI(root) {
           <div class="unlock-icon">${icon('lock')}</div><span class="eyebrow">ACCESO PERSONAL</span>
           <h2>Abre tu biblioteca</h2>
           <p>Introduce la contraseña para desbloquear los documentos y el buscador en este dispositivo.</p>
-          <form id="unlock-form"><label for="password">Contraseña de la biblioteca</label><div class="password-field">${icon('lock')}<input id="password" type="password" name="password" autocomplete="current-password" required placeholder="Tu contraseña" aria-describedby="unlock-status" /></div><button id="unlock-button" class="button button-primary unlock-button" type="submit">Desbloquear biblioteca ${icon('arrow')}</button></form>
+          <form id="unlock-form"><label for="password">Contraseña de la biblioteca</label><div class="password-field">${icon('lock')}<input id="password" type="password" name="password" autocomplete="current-password" required placeholder="Tu contraseña" aria-describedby="unlock-status" /></div><div class="remember-device-option"><label class="remember-device" for="remember-device"><input id="remember-device" type="checkbox" name="rememberDevice" checked aria-describedby="remember-device-help" /><span>Recordar este dispositivo</span></label><p id="remember-device-help">La biblioteca se abrirá sin pedir la contraseña. Actívalo sólo en un dispositivo personal.</p></div><button id="unlock-button" class="button button-primary unlock-button" type="submit">Desbloquear biblioteca ${icon('arrow')}</button></form>
           <p id="unlock-status" class="form-status" role="status" aria-live="polite"></p>
           <p class="access-file-note">Para la primera prueba, consulta el archivo <strong>ACCESO_LOCAL.txt</strong> de la carpeta <strong>biblioteca-local</strong>.</p>
-          <div class="privacy-note">${icon('info')}<p>Los documentos se descifran en este navegador. La contraseña no se guarda.</p></div>
+          <div class="privacy-note">${icon('info')}<p>Los documentos se descifran en este navegador. La contraseña no se guarda. Si recuerdas este dispositivo, se conserva una clave de acceso local.</p></div>
         </div>
       </section>
       <section id="search-view" class="search-view" hidden aria-labelledby="search-title">
