@@ -299,8 +299,8 @@ function onSearchMessage({ data }) {
   ui.renderResults(results, session.corpus.sections, { compact: e.compactResults.checked });
   ui.renderInterpretation(data.interpretation);
   const total = data.totalDocuments ?? new Set(results.map(item => item.documentId)).size;
-  e.resultCount.textContent = `${results.length} destinos · ${total} ${total === 1 ? 'documento relacionado' : 'documentos relacionados'}`;
-  e.searchStatus.textContent = `${data.durationMs.toFixed(0)} ms de búsqueda · ${data.total} fragmentos relacionados${data.total > results.length ? ' · se muestran los destinos más relevantes' : ''}`;
+  e.resultCount.textContent = `${results.length} destinos · ${total} ${total === 1 ? 'documento con coincidencias' : 'documentos con coincidencias'}`;
+  e.searchStatus.textContent = `${data.durationMs.toFixed(0)} ms de búsqueda · ${data.total} fragmentos con coincidencias${data.total > results.length ? ' · se muestran los destinos más relevantes' : ''}`;
   if (data.interpretation.ambiguous?.length) e.searchStatus.textContent += ` · ${data.interpretation.ambiguous.join(' ')}`;
 }
 e.compactResults.addEventListener('change', () => {

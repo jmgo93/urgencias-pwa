@@ -19,10 +19,10 @@ La [guía de primera prueba](docs/PRIMERA_PRUEBA_LOCAL.md) explica los controles
 
 ## Qué incluye
 
-- Búsqueda por frases, términos literales, siglas y un vocabulario inicial de sinónimos y equivalencias. Se conservan las negaciones y se señalan siglas ambiguas.
+- Búsqueda que exige todos los conceptos afirmados en el mismo fragmento o su encabezado: añadir otro concepto acota los resultados. Acepta un vocabulario inicial de sinónimos y equivalencias, sin exigir todas las variantes a la vez. Las palabras funcionales se omiten; las negaciones se conservan como contexto y se señalan siglas ambiguas. Las comillas exigen una frase literal.
 - Índice preparado guardado cifrado en este dispositivo para reutilizarlo al abrir; no se vuelve a construir en cada inicio. Puedes escribir mientras termina de preparar la primera búsqueda.
 - Historial privado local de las últimas 20 búsquedas: repite una consulta con sus filtros o utiliza **Borrar historial** para retirarlo sin borrar la biblioteca.
-- Filtros por sección y por capítulos o casos, con conexiones explicadas, coincidencias y términos ausentes en cada fragmento.
+- Filtros por sección y por capítulos o casos, con coincidencias explicadas. Se priorizan la evidencia en el cuerpo, las coincidencias literales y la proximidad de los conceptos; no se mezclan resultados parciales cuando no hay coincidencia conjunta. Hasta 30 destinos y tres páginas por documento; el contador de fragmentos y documentos refleja el conjunto encontrado.
 - Vista **Sólo títulos**, activable en los resultados: toca un título para desplegar su resumen y utiliza **Abrir página** para consultar el PDF. Desactívala para volver a ver todas las sugerencias completas. La elección se conserva en este navegador.
 - Lector de PDF con página original y página del documento pequeño, navegación, zoom y texto extraído. Conserva consulta, filtros, resultados y posición al volver.
 - Biblioteca local de **244 PDF: 198 capítulos, 45 casos y un documento de preliminares**, que cubren las **1.101 páginas** del libro. Las **32 páginas con OCR** están identificadas.

@@ -1,56 +1,103 @@
 {
-  "measuredAt": "2026-10-25T20:23:22.706Z",
+  "measuredAt": "2026-10-26T15:45:32.862Z",
   "runtime": "v24.16.0",
   "scope": "Motor documental en Node local. No mide red, desbloqueo, interfaz ni renderizado PDF.",
   "corpus": {
     "documents": 244,
     "fragments": 4074,
-    "indexMs": 2811.02
+    "indexMs": 5298.23
   },
   "methodology": {
     "warmupRounds": 10,
     "measuredRounds": 50,
-    "queriesPerRound": 10
+    "queriesPerRound": 12
   },
+  "narrowing": [
+    {
+      "query": "disnea",
+      "totalFragments": 172,
+      "totalDocuments": 73
+    },
+    {
+      "query": "disnea dolor torácico",
+      "totalFragments": 41,
+      "totalDocuments": 26
+    },
+    {
+      "query": "disnea dolor torácico taquicardia",
+      "totalFragments": 11,
+      "totalDocuments": 8
+    }
+  ],
   "aggregate": {
-    "p50Ms": 10.23,
-    "p95Ms": 23.65,
-    "maxMs": 42.23
+    "p50Ms": 17.47,
+    "p95Ms": 42.71,
+    "maxMs": 94.22
   },
   "queries": [
     {
+      "query": "disnea",
+      "coldMs": 150.77,
+      "totalFragments": 172,
+      "totalDocuments": 73,
+      "returnedResults": 30,
+      "topOriginalPages": [
+        257,
+        260,
+        1087
+      ],
+      "p50Ms": 16.07,
+      "p95Ms": 32.78,
+      "maxMs": 43.82
+    },
+    {
       "query": "disnea dolor torácico",
-      "coldMs": 44.39,
-      "totalFragments": 236,
-      "totalDocuments": 83,
+      "coldMs": 40.33,
+      "totalFragments": 41,
+      "totalDocuments": 26,
       "returnedResults": 30,
       "topOriginalPages": [
         208,
         1061,
         258
       ],
-      "p50Ms": 21.16,
-      "p95Ms": 29.03,
-      "maxMs": 34.63
+      "p50Ms": 34.39,
+      "p95Ms": 48.42,
+      "maxMs": 62.31
+    },
+    {
+      "query": "disnea dolor torácico taquicardia",
+      "coldMs": 40.24,
+      "totalFragments": 11,
+      "totalDocuments": 8,
+      "returnedResults": 10,
+      "topOriginalPages": [
+        1061,
+        258,
+        212
+      ],
+      "p50Ms": 39.37,
+      "p95Ms": 50.53,
+      "maxMs": 65.03
     },
     {
       "query": "gasometría acidosis",
-      "coldMs": 12.58,
-      "totalFragments": 306,
-      "totalDocuments": 113,
+      "coldMs": 21.46,
+      "totalFragments": 60,
+      "totalDocuments": 45,
       "returnedResults": 30,
       "topOriginalPages": [
         74,
         1098,
         536
       ],
-      "p50Ms": 10.63,
-      "p95Ms": 15.64,
-      "maxMs": 17.57
+      "p50Ms": 17.61,
+      "p95Ms": 32.36,
+      "maxMs": 33.79
     },
     {
       "query": "sin fiebre disnea",
-      "coldMs": 25.19,
+      "coldMs": 48.15,
       "totalFragments": 172,
       "totalDocuments": 73,
       "returnedResults": 30,
@@ -59,13 +106,13 @@
         257,
         260
       ],
-      "p50Ms": 19.01,
-      "p95Ms": 24.52,
-      "maxMs": 28.74
+      "p50Ms": 31.33,
+      "p95Ms": 55.23,
+      "maxMs": 94.22
     },
     {
       "query": "menigitis",
-      "coldMs": 8.75,
+      "coldMs": 21.53,
       "totalFragments": 94,
       "totalDocuments": 35,
       "returnedResults": 30,
@@ -74,13 +121,13 @@
         433,
         430
       ],
-      "p50Ms": 3.84,
-      "p95Ms": 6.9,
-      "maxMs": 7.42
+      "p50Ms": 6.18,
+      "p95Ms": 13.01,
+      "maxMs": 25.93
     },
     {
       "query": "tromboembolismo",
-      "coldMs": 3.1,
+      "coldMs": 13.44,
       "totalFragments": 112,
       "totalDocuments": 41,
       "returnedResults": 30,
@@ -89,28 +136,28 @@
         266,
         267
       ],
-      "p50Ms": 3.13,
-      "p95Ms": 5.16,
-      "maxMs": 9.63
+      "p50Ms": 5.44,
+      "p95Ms": 13.27,
+      "maxMs": 36.79
     },
     {
       "query": "hiponatremia convulsiones",
-      "coldMs": 10.37,
-      "totalFragments": 286,
-      "totalDocuments": 84,
-      "returnedResults": 30,
+      "coldMs": 19.95,
+      "totalFragments": 9,
+      "totalDocuments": 6,
+      "returnedResults": 7,
       "topOriginalPages": [
         514,
         517,
         675
       ],
-      "p50Ms": 8.91,
-      "p95Ms": 17.86,
-      "maxMs": 31.44
+      "p50Ms": 10.7,
+      "p95Ms": 15.68,
+      "maxMs": 21.16
     },
     {
       "query": "\"edema agudo de pulmón\"",
-      "coldMs": 20.14,
+      "coldMs": 42.34,
       "totalFragments": 78,
       "totalDocuments": 33,
       "returnedResults": 30,
@@ -119,54 +166,56 @@
         172,
         94
       ],
-      "p50Ms": 16.46,
-      "p95Ms": 32.17,
-      "maxMs": 42.23
+      "p50Ms": 29.54,
+      "p95Ms": 48.86,
+      "maxMs": 72.74
     },
     {
       "query": "ECG síncope",
-      "coldMs": 11.12,
-      "totalFragments": 279,
-      "totalDocuments": 106,
-      "returnedResults": 30,
+      "coldMs": 7.72,
+      "totalFragments": 6,
+      "totalDocuments": 6,
+      "returnedResults": 6,
       "topOriginalPages": [
         88,
         390,
         208
       ],
-      "p50Ms": 5.84,
-      "p95Ms": 11.14,
-      "maxMs": 19.67
+      "p50Ms": 6.6,
+      "p95Ms": 9.83,
+      "maxMs": 12.98
     },
     {
       "query": "anamnesis dolor abdominal vómitos",
-      "coldMs": 13.63,
-      "totalFragments": 454,
-      "totalDocuments": 131,
+      "coldMs": 21.68,
+      "totalFragments": 81,
+      "totalDocuments": 33,
       "returnedResults": 30,
       "topOriginalPages": [
         1073,
         329,
         335
       ],
-      "p50Ms": 12.25,
-      "p95Ms": 18.67,
-      "maxMs": 19.85
+      "p50Ms": 19.3,
+      "p95Ms": 29.6,
+      "maxMs": 48.72
     },
     {
       "query": "qwertyxyz",
-      "coldMs": 0.78,
+      "coldMs": 1.23,
       "totalFragments": 0,
       "totalDocuments": 0,
       "returnedResults": 0,
       "topOriginalPages": [],
-      "p50Ms": 0.18,
-      "p95Ms": 0.38,
-      "maxMs": 0.39
+      "p50Ms": 0.27,
+      "p95Ms": 0.49,
+      "maxMs": 0.59
     }
   ],
   "checks": [
     "Referencias originales y locales coherentes en todos los resultados medidos.",
+    "Todos los grupos positivos requeridos; ninguna coincidencia parcial.",
+    "Reducción progresiva de fragmentos y documentos al añadir grupos.",
     "Negación como contexto.",
     "Errata de una edición señalada explícitamente.",
     "Término inexistente sin coincidencias."

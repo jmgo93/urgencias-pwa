@@ -33,14 +33,92 @@ test('normalization removes accents but preserves ñ, decimal numbers and litera
   assert.equal(normalize('2,5 mg/dl'), '2,5 mg/dl');
 });
 
-test('distinct query concepts outrank repetitions of a single concept', () => {
+test('all distinct positive query concepts are required instead of returning partial matches', () => {
   const result = engine.search('dolor torácico y dificultad respiratoria');
   assert.equal(result.results[0].id, 'both');
   assert.deepEqual(result.results[0].matchedTerms, ['Dolor torácico', 'Disnea']);
   assert.deepEqual(result.results[0].missingTerms, []);
-  const partial = result.results.find((item) => item.id === 'chest-only');
-  assert.deepEqual(partial.missingTerms, ['Disnea']);
-  assert.ok(result.results[0].score > partial.score);
+  assert.ok(!result.results.some((item) => item.id === 'chest-only'));
+  assert.ok(result.results.every((item) => item.missingTerms.length === 0));
+});
+
+const separatePages = (texts, titles = []) => ({
+  sections: [],
+  documents: texts.map((_, index) => ({ id: `doc-${index}`, title: titles[index] ?? 'Referencia', kind: 'chapter', originalStart: index + 1, pageCount: 1 })),
+  fragments: texts.map((text, index) => ({ id: `fragment-${index}`, documentId: `doc-${index}`, text, originalPage: index + 1, localPage: 1, source: 'native' })),
+});
+
+test('adding positive groups successively narrows the complete result set without a partial fallback', async () => {
+  const narrowing = await createSearchEngine(separatePages([
+    'Disnea, dolor torácico e hiponatremia.', 'Disnea y dolor torácico.',
+    'Disnea e hiponatremia.', 'Dolor torácico.', 'Hiponatremia.',
+  ]));
+  const queries = ['disnea', 'disnea dolor torácico', 'disnea dolor torácico hiponatremia'];
+  const sets = queries.map((query) => narrowing.search(query));
+  assert.deepEqual(sets.map((result) => result.total), [3, 2, 1]);
+  assert.deepEqual(sets.map((result) => result.totalDocuments), [3, 2, 1]);
+  for (let index = 1; index < sets.length; index += 1) {
+    const previous = new Set(sets[index - 1].results.map((result) => result.id));
+    assert.ok(sets[index].results.every((result) => previous.has(result.id)));
+  }
+  assert.deepEqual(narrowing.search('disnea dolor torácico qwertyxyz').results, []);
+  const filtered = narrowing.search('disnea dolor torácico', { kind: 'case' });
+  assert.equal(filtered.total, 0);
+});
+
+test('equivalent aliases form one group and require complete phrases in the source', async () => {
+  const aliases = await createSearchEngine(separatePages([
+    'Dificultad respiratoria y dolor precordial.', 'Dificultad para valorar la respiratoria.', 'Disnea.',
+  ]));
+  const single = aliases.search('disnea');
+  const duplicate = aliases.search('disnea dificultad respiratoria');
+  assert.deepEqual(duplicate.results.map((row) => row.id), single.results.map((row) => row.id));
+  assert.ok(!single.results.some((row) => row.id === 'fragment-1'));
+  assert.deepEqual(aliases.search('disnea dolor torácico').results.map((row) => row.id), ['fragment-0']);
+});
+
+test('prefixes and spelling recovery work per group beside another exact concept', async () => {
+  const recovered = await createSearchEngine(separatePages([
+    'Disnea, meningitis e hiponatremia.', 'Disnea.', 'Meningitis e hiponatremia.',
+  ]));
+  for (const term of ['hiponatr', 'menigitis']) {
+    const broad = recovered.search(term);
+    const narrow = recovered.search(`${term} disnea`);
+    assert.equal(broad.total, 2);
+    assert.equal(narrow.total, 1);
+    assert.equal(narrow.results[0].id, 'fragment-0');
+    assert.ok(narrow.results[0].matchedTerms.some((match) => match.includes(term === 'hiponatr' ? '…' : '≈ meningitis')));
+    assert.equal(recovered.search(`${term} disnea qwertyxyz`).total, 0);
+  }
+  assert.equal(recovered.search('"menigitis" disnea').total, 0);
+});
+
+test('adding a group never enables prefix or fuzzy broadening of an existing literal term', async () => {
+  const literal = await createSearchEngine(separatePages([
+    'Disnea, meningitis e hiponatremia.', 'Hiponatr menigitis.',
+  ]));
+  for (const term of ['hiponatr', 'menigitis']) {
+    assert.deepEqual(literal.search(term).results.map((row) => row.id), ['fragment-1']);
+    assert.deepEqual(literal.search(`${term} disnea`).results, []);
+  }
+});
+
+test('conjunctive matches keep chapter title context and rank body evidence above title-only context', async () => {
+  const context = await createSearchEngine(separatePages([
+    'Disnea en el estudio inicial.', 'Disnea y dolor torácico.',
+  ], ['Dolor torácico', 'Referencia']));
+  const result = context.search('disnea dolor torácico');
+  assert.equal(result.total, 2);
+  assert.deepEqual(result.results.map((row) => row.id), ['fragment-1', 'fragment-0']);
+});
+
+test('literal wording receives ranking credit even when an earlier catalog alias also appears', async () => {
+  const literal = await createSearchEngine(separatePages([
+    'Disnea.', 'Disnea y dificultad respiratoria.',
+  ]));
+  const result = literal.search('dificultad respiratoria');
+  assert.equal(result.results[0].id, 'fragment-1');
+  assert.ok(result.results[0].score - result.results[1].score >= 30);
 });
 
 test('curated English aliases recover the Spanish source without translating evidence', () => {

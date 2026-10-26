@@ -33,7 +33,8 @@ test('restoring a serialized prepared engine skips indexing and preserves retrie
   assert.equal(restored.fragmentCount, 5);
   assert.deepEqual(progress, [], 'A valid prepared index must not rebuild any text batches.');
   for (const query of ['disnea dolor torácico', 'sin fiebre disnea', 'blood gas ECG', 'menigitis',
-    'hiponatr', 'niña', 'nina', 'PCR', '"disnea y dolor torácico"', 'qwertyxyz', '']) {
+    'hiponatr', 'menigitis hiponatr', 'hiponatr síncope', 'disnea hiponatr',
+    'disnea dolor torácico qwertyxyz', 'niña', 'nina', 'PCR', '"disnea y dolor torácico"', 'qwertyxyz', '']) {
     for (const filters of [{}, { sectionId: 'a', limit: 1 }, { kind: 'case', sectionId: 'b' }]) {
       assert.deepEqual(comparable(restored.search(query, filters)), comparable(fresh.search(query, filters)));
     }
