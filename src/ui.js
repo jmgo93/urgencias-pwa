@@ -28,7 +28,7 @@ export function escapeHtml(value) {
 
 function firstValue(...values) { return values.find((value) => value !== undefined && value !== null && value !== ''); }
 
-export function renderResults(results = [], sections = []) {
+export function renderResults(results = [], sections = [], { compact = false } = {}) {
   return results.map((result, index) => {
     const fragment = result.fragment || result;
     const span = fragment.spans?.[0] || {};
@@ -51,16 +51,22 @@ export function renderResults(results = [], sections = []) {
     const bytes = Number(result.bytes ?? fragment.bytes);
     const pageCount = Number(result.pageCount ?? fragment.pageCount);
     const fileMeta = [Number.isFinite(bytes) && bytes > 0 ? `${(bytes / 1048576).toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} MiB` : '', Number.isFinite(pageCount) && pageCount > 0 ? `${pageCount} ${pageCount === 1 ? 'página' : 'páginas'}` : ''].filter(Boolean).join(' · ');
-    return `<article class="result-card" data-result-id="${escapeHtml(id)}">
-      <div class="result-rank" aria-hidden="true">${String(index + 1).padStart(2, '0')}</div>
-      <div class="result-main">
-        <div class="result-eyebrow">${icon('layers')}<span>${escapeHtml(sectionTitle)}</span>${isOcr ? '<span class="badge badge-warning">OCR pendiente de revisión</span>' : ''}</div>
-        <h2><button type="button" class="result-title-button" data-open-result="${escapeHtml(id)}">${escapeHtml(title)}</button></h2>
-        ${showSubsection ? `<p class="subsection-reference">Referencia de texto: ${escapeHtml(subsectionTitle)}</p>` : ''}
+    const eyebrow = `<div class="result-eyebrow">${icon('layers')}<span>${escapeHtml(sectionTitle)}</span>${isOcr ? '<span class="badge badge-warning">OCR pendiente de revisión</span>' : ''}</div>`;
+    const content = `${showSubsection ? `<p class="subsection-reference">Referencia de texto: ${escapeHtml(subsectionTitle)}</p>` : ''}
         <p class="result-snippet">${escapeHtml(snippet.length > 320 ? `${snippet.slice(0, 317)}…` : snippet)}</p>
         ${matchedTerms.length ? `<div class="match-list" aria-label="Términos encontrados">${matchedTerms.map((term) => `<span class="match-chip">${icon('check')}${escapeHtml(term)}</span>`).join('')}</div>` : ''}
         ${missingTerms.length ? `<p class="missing-terms">Sin coincidencia en este fragmento: ${escapeHtml(missingTerms.join(', '))}.</p>` : ''}
-        <div class="result-bottom"><div class="result-location">${icon('page')}<span>${escapeHtml(meta || sourceLabel)}</span>${fileMeta ? `<span class="file-meta">${escapeHtml(fileMeta)}</span>` : ''}<span class="source-edition">Libro · 2018</span></div><button class="open-result-button" type="button" data-open-result="${escapeHtml(id)}">Abrir página ${icon('arrow')}</button></div>
+        <div class="result-bottom"><div class="result-location">${icon('page')}<span>${escapeHtml(meta || sourceLabel)}</span>${fileMeta ? `<span class="file-meta">${escapeHtml(fileMeta)}</span>` : ''}<span class="source-edition">Libro · 2018</span></div><button class="open-result-button" type="button" data-open-result="${escapeHtml(id)}">Abrir página ${icon('arrow')}</button></div>`;
+    if (compact) return `<details class="result-card result-card-compact" data-result-id="${escapeHtml(id)}">
+      <summary class="result-summary"><h2><span>${escapeHtml(title)}</span>${icon('chevronRight', 'result-chevron')}</h2></summary>
+      <div class="result-details">${eyebrow}${content}</div>
+    </details>`;
+    return `<article class="result-card" data-result-id="${escapeHtml(id)}">
+      <div class="result-rank" aria-hidden="true">${String(index + 1).padStart(2, '0')}</div>
+      <div class="result-main">
+        ${eyebrow}
+        <h2><button type="button" class="result-title-button" data-open-result="${escapeHtml(id)}">${escapeHtml(title)}</button></h2>
+        ${content}
       </div>
     </article>`;
   }).join('');
@@ -111,7 +117,7 @@ export function mountUI(root) {
         <div id="interpretation" class="interpretation" hidden></div><p id="search-status" class="search-status" role="status" aria-live="polite"></p>
         <section id="search-history" class="search-history" aria-labelledby="search-history-title" aria-describedby="search-history-note" hidden><div class="history-heading"><h2 id="search-history-title">Últimas búsquedas</h2><button id="clear-history-button" type="button" class="button button-text button-compact">Borrar historial</button></div><p id="search-history-note">Guardado sólo en este dispositivo. Toca una búsqueda para repetirla.</p><ul id="search-history-list" class="search-history-list"></ul></section>
         <div id="empty-state" class="empty-state"><div class="empty-heading"><span class="soft-icon">${icon('spark')}</span><div><h2>Empieza por lo que tienes en mente</h2><p>Una palabra, una pregunta o una combinación de conceptos.</p></div></div><div class="example-grid">${exampleQueries.map((query, index) => `<button type="button" class="example-card" data-query="${escapeHtml(query)}"><span class="example-number">0${index + 1}</span><span>${escapeHtml(query)}</span>${icon('arrow')}</button>`).join('')}</div><div class="how-it-works"><div><span class="step-number">1</span><div><strong>Describe lo que buscas</strong><p>El buscador relaciona términos y sinónimos.</p></div></div><div><span class="step-number">2</span><div><strong>Explora las conexiones</strong><p>Compara los fragmentos y sus coincidencias.</p></div></div><div><span class="step-number">3</span><div><strong>Abre la página exacta</strong><p>Lee el capítulo y vuelve a tus resultados.</p></div></div></div></div>
-        <div id="search-summary" class="search-summary" hidden><div><h2 id="result-count">Resultados</h2><p>Ordenados por coincidencia con tu búsqueda</p></div><span class="source-note">${icon('info')}Relevancia documental, no probabilidad diagnóstica</span></div>
+        <div id="search-summary" class="search-summary" hidden><div><h2 id="result-count">Resultados</h2><p>Ordenados por coincidencia con tu búsqueda</p></div><label class="results-display-switch"><input id="compact-results" type="checkbox" role="switch" aria-controls="results" /><span class="results-switch-track" aria-hidden="true"><span></span></span><span>Sólo títulos</span></label><span class="source-note">${icon('info')}Relevancia documental, no probabilidad diagnóstica</span></div>
         <div id="results" class="results" aria-label="Resultados de la búsqueda"></div>
       </section>
       <section id="reader-view" class="reader-view" hidden aria-labelledby="reader-title">
@@ -140,8 +146,8 @@ export function mountUI(root) {
       elements['search-history-list'].innerHTML = renderHistoryEntries(visible);
       elements['search-history'].hidden = visible.length === 0;
     },
-    renderResults(results, sections) {
-      elements.results.innerHTML = renderResults(results, sections);
+    renderResults(results, sections, options) {
+      elements.results.innerHTML = renderResults(results, sections, options);
       elements['empty-state'].hidden = true;
       elements['search-summary'].hidden = false;
       elements['result-count'].textContent = `${results.length} ${results.length === 1 ? 'resultado' : 'resultados'}`;
