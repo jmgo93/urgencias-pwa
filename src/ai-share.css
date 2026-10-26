@@ -1,0 +1,65 @@
+#reader-ai-share { min-height: 48px; font-size: 17px; gap: 8px; white-space: normal; }
+#reader-ai-share .icon { color: var(--md-sys-color-primary); width: 21px; height: 21px; }
+.reader-toolbar:has(#reader-ai-share), .reader-tools:has(#reader-ai-share) { flex-wrap: wrap; }
+.reader-tools:has(#reader-ai-share) { min-width: 0; max-width: 100%; }
+.ai-share-dialog { width: min(680px, calc(100vw - 32px)); max-width: calc(100vw - 32px); max-height: calc(100dvh - 32px); margin: auto; padding: 0; box-sizing: border-box; overflow: hidden; border: 1px solid var(--md-sys-color-outline-variant); border-radius: 28px; background: var(--md-sys-color-surface-container-high); color: var(--md-sys-color-on-surface); box-shadow: 0 16px 48px color-mix(in srgb, var(--md-sys-color-shadow) 24%, transparent); }
+.ai-share-dialog[open] { display: flex; flex-direction: column; }
+.ai-share-scroll { min-height: 0; overflow: auto; padding: 0 28px 20px; overscroll-behavior: contain; }
+.ai-share-dialog::backdrop { background: color-mix(in srgb, var(--md-sys-color-scrim) 48%, transparent); }
+.ai-share-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 28px 0; flex-shrink: 0; }
+.ai-share-heading form { margin: 0; }
+.ai-share-symbol { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 16px; color: var(--md-sys-color-on-tertiary-container); background: var(--md-sys-color-tertiary-container); }
+.ai-share-symbol .icon { width: 28px; height: 28px; }
+.ai-share-dialog h2 { margin: 18px 0 10px; font: 600 25px/1.35 var(--font-heading); letter-spacing: -.5px; }
+.ai-share-dialog h3 { margin: 0 0 8px; font-size: 19px; line-height: 1.5; }
+.ai-share-dialog p, .ai-share-dialog li { font-size: 17px; line-height: 1.65; }
+.ai-share-dialog p { margin: 10px 0; color: var(--md-sys-color-on-surface-variant); }
+.ai-document-summary { padding: 12px 14px; border-radius: 14px; background: var(--md-sys-color-surface-container); color: var(--md-sys-color-on-surface) !important; font-weight: 700; overflow-wrap: anywhere; }
+.ai-share-dialog fieldset { border: 0; margin: 20px 0; padding: 0; min-width: 0; }
+.ai-share-dialog legend, .ai-question-label { display: block; margin-bottom: 8px; padding: 0; font-size: 17px; font-weight: 800; }
+.ai-provider-options > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.ai-provider-options label { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 52px; padding: 10px 14px; border: 1px solid var(--md-sys-color-outline); border-radius: 16px; font-size: 18px; font-weight: 800; cursor: pointer; }
+.ai-provider-options label:has(input:checked) { border-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary-container); background: var(--md-sys-color-primary-container); }
+.ai-provider-options label:focus-within, .ai-material-options label:focus-within { outline: 2px solid var(--md-sys-color-primary); outline-offset: 3px; }
+.ai-share-dialog input[type="checkbox"], .ai-share-dialog input[type="radio"] { width: 21px; height: 21px; margin: 0; flex-shrink: 0; accent-color: var(--md-sys-color-primary); }
+.ai-share-dialog textarea { display: block; width: 100%; box-sizing: border-box; min-height: 120px; border: 1px solid var(--md-sys-color-outline); border-radius: 14px; padding: 12px 14px; font: 400 18px/1.6 var(--font-body); background: var(--md-sys-color-surface); color: var(--md-sys-color-on-surface); resize: vertical; }
+.ai-share-dialog textarea:focus-visible { outline: 2px solid var(--md-sys-color-primary); outline-offset: 3px; }
+.ai-share-dialog textarea::placeholder { color: var(--md-sys-color-on-surface-variant); opacity: 1; }
+.ai-material-options label { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 8px 0; font-size: 17px; line-height: 1.55; cursor: pointer; }
+.ai-share-dialog .ai-share-privacy { font-size: 16px; padding: 12px 14px; border-radius: 12px; background: var(--md-sys-color-surface-container); }
+.ai-share-dialog .ai-offline-note { font-size: 16px; }
+.ai-share-status:not(:empty) { padding: 10px 0; font-weight: 700; color: var(--md-sys-color-primary) !important; }
+.ai-share-status:empty { margin: 0; padding: 0; }
+.ai-material-warnings { padding: 12px 14px 12px 32px; border: 1px solid var(--md-sys-color-outline-variant); border-radius: 12px; }
+.ai-material-warnings li + li { margin-top: 8px; }
+.ai-share-native { width: 100%; min-height: 52px; margin-top: 8px; font-size: 18px; }
+.ai-native-help { font-size: 16px !important; }
+.ai-manual-share { margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--md-sys-color-outline-variant); }
+.ai-manual-share > summary { min-height: 48px; font-size: 18px; line-height: 1.5; font-weight: 800; cursor: pointer; color: var(--md-sys-color-primary); }
+.ai-files { list-style: none; margin: 16px 0; padding: 0; display: grid; gap: 12px; }
+.ai-files li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; border-radius: 14px; background: var(--md-sys-color-surface-container); }
+.ai-file-name { min-width: 0; overflow-wrap: anywhere; font-size: 16px; }
+.ai-files .button { flex-shrink: 0; min-height: 48px; font-size: 17px; padding: 10px 16px; }
+.ai-web-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.ai-web-actions .button { min-height: 48px; font-size: 17px; }
+#ai-open-provider[aria-disabled="true"] { pointer-events: none; opacity: .6; }
+.ai-prompt-details { margin-top: 22px; }
+.ai-prompt-details summary { display: flex; align-items: center; min-height: 48px; font-size: 17px; font-weight: 800; cursor: pointer; color: var(--md-sys-color-primary); }
+.ai-prompt-details textarea { font-size: 16px; }
+.ai-share-close { display: flex; justify-content: flex-end; margin-top: 18px; }
+.ai-share-footer { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 28px; border-top: 1px solid var(--md-sys-color-outline-variant); background: var(--md-sys-color-surface-container-high); flex-shrink: 0; }
+.ai-share-footer .ai-share-native { flex: 1 1 240px; width: auto; margin: 0; }
+.ai-share-footer .ai-share-close { margin: 0; }
+@media (max-width: 520px) {
+  .ai-share-dialog { width: calc(100vw - 20px); max-width: calc(100vw - 20px); max-height: calc(100dvh - 20px); padding: 0; border-radius: 24px; }
+  .ai-share-heading { padding: 12px 16px 0; }
+  .ai-share-scroll { padding: 0 16px 12px; }
+  .ai-share-footer { padding: 10px 16px; }
+  .ai-share-footer .ai-share-close { width: 100%; }
+  .ai-share-dialog h2 { font-size: 23px; }
+  .ai-provider-options label { padding: 10px 8px; font-size: 17px; gap: 8px; }
+  .ai-files li { flex-direction: column; align-items: stretch; }
+  .ai-files .button, .ai-web-actions .button, .ai-share-close .button { width: 100%; justify-content: center; }
+  .ai-web-actions { flex-direction: column; }
+  .ai-share-close { display: block; }
+}

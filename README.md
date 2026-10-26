@@ -2,6 +2,8 @@
 
 Biblioteca personal de consulta documental: escribe una frase, compara los fragmentos relacionados y abre el PDF del capítulo o del caso en la página correspondiente.
 
+Desde el lector, **Consultar con IA** prepara el PDF abierto y su texto extraído / OCR para ChatGPT o Gemini, con pregunta y referencias de página. Utiliza el menú de compartir del dispositivo cuando es compatible; también permite descargar los archivos y abrir la IA para adjuntarlos. No envía contenido automáticamente. [Consultar con IA](docs/CONSULTAR_CON_IA.md).
+
 La primera versión funciona sin backend ni base de datos en servidor. Los datos del dispositivo se guardan localmente. Repositorio: [jmgo93/urgencias-pwa](https://github.com/jmgo93/urgencias-pwa). Aplicación: [Urgencias en GitHub Pages](https://jmgo93.github.io/urgencias-pwa/); el estado del despliegue se comprueba en Actions.
 
 Para usar el libro en el móvil, **instala primero la app y ábrela desde su icono**. Importa entonces el paquete privado `Biblioteca.urgencias` desde la app instalada, pulsa **Preparar uso sin conexión** y espera al estado **Lista para usar sin conexión**. Introduce la contraseña una vez y deja marcado **Recordar este dispositivo**: después la biblioteca se abrirá directamente, incluso sin Internet. La importación es local: no sube el archivo a GitHub. [Guía para el móvil](docs/TRASLADO_AL_MOVIL.md).

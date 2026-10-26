@@ -6,12 +6,15 @@ import '@fontsource/poppins/latin-700.css';
 import './styles.css';
 import './reader.css';
 import './offline.css';
+import './ai-share.css';
 import { mountUI, escapeHtml } from './ui.js';
 import { deriveLibraryKey, decryptAsset } from './crypto.js';
 import { inspectBundle, verifyBundleEntry } from './bundle.js';
 import { reconstructPage } from './page-text.js';
 import { disposePDFTask } from './pdf-lifecycle.js';
 import { setupInstallation } from './install.js';
+import { setupAiShare } from './ai-share-dialog.js';
+import { buildAiMaterial } from './ai-material.js';
 import { saveDeviceAccess, loadDeviceAccess, forgetDeviceAccess } from './device-access.js';
 import { readPreparedSearch, writePreparedSearch, readSearchHistory, writeSearchHistory,
   clearSearchHistory, forgetLocalSearchData } from './local-search-data.js';
@@ -71,6 +74,29 @@ let serviceWorkerRegistration;
 let openingLibrary = false;
 let restoringDevice = false;
 let localWrites = Promise.resolve();
+let aiContext;
+const aiShare = setupAiShare({
+  button: e.readerAiShare,
+  getContext(options) {
+    if (!session || !pdfBytes || !pdfDocument || pdfDocumentId !== currentResult?.documentId
+      || document.body.dataset.view !== 'reader') throw new Error('Abre un PDF antes de preparar la consulta.');
+    const active = session;
+    const sourceDocument = active.corpus.documents.find(item => item.id === pdfDocumentId);
+    aiContext = { session: active, documentId: pdfDocumentId, page: pageNumber, generation: openGeneration };
+    return buildAiMaterial({ document: sourceDocument,
+      fragments: active.corpus.fragments.filter(item => item.documentId === pdfDocumentId),
+      pdfBytes, pageNumber, query: e.query.value.trim(), ...options });
+  },
+  isContextCurrent() {
+    return Boolean(session && pdfBytes && pdfDocument && pdfDocumentId === currentResult?.documentId
+      && document.body.dataset.view === 'reader' && (!aiContext || (aiContext.session === session
+        && aiContext.documentId === pdfDocumentId && aiContext.page === pageNumber && aiContext.generation === openGeneration)));
+  },
+});
+function closeAiShare() {
+  aiShare.close({ restoreFocus: false });
+  aiContext = undefined;
+}
 function queueLocalWrite(operation) {
   const pending = localWrites.then(operation);
   localWrites = pending.catch(() => {});
@@ -362,6 +388,8 @@ async function getPDFLibrary() {
   return pdfLibrary;
 }
 async function closePDF() {
+  closeAiShare();
+  e.readerAiShare.disabled = true;
   ++renderGeneration;
   renderTask?.cancel();
   renderTask = undefined;
@@ -387,6 +415,8 @@ async function openResult(id, addHistory = false) {
   const active = session;
   const result = results.find(item => item.id === id);
   if (!result) return;
+  closeAiShare();
+  e.readerAiShare.disabled = true;
   const generation = ++openGeneration;
   currentResult = result;
   resultIndex = results.indexOf(result);
@@ -430,6 +460,7 @@ async function openResult(id, addHistory = false) {
     e.pageTotal.textContent = pdfDocument.numPages;
     e.pageNumber.max = pdfDocument.numPages;
     e.readerNativeOpen.disabled = false;
+    e.readerAiShare.disabled = false;
     await renderPage();
   } catch (error) {
     console.warn('No se pudo abrir el lector PDF:', error.message);
@@ -480,6 +511,8 @@ async function renderPage() {
 }
 function returnToSearch() {
   if (!session) return;
+  closeAiShare();
+  e.readerAiShare.disabled = true;
   ++openGeneration;
   renderTask?.cancel();
   ui.showView('search');
@@ -493,10 +526,11 @@ e.readerBack.addEventListener('click', () => {
 window.addEventListener('popstate', () => { if (session) returnToSearch(); });
 e.readerResultPrev.addEventListener('click', () => { if (resultIndex > 0) openResult(results[resultIndex - 1].id); });
 e.readerResultNext.addEventListener('click', () => { if (resultIndex < results.length - 1) openResult(results[resultIndex + 1].id); });
-e.pagePrev.addEventListener('click', () => { if (pageNumber > 1) { --pageNumber; renderPage(); } });
-e.pageNext.addEventListener('click', () => { if (pdfDocument && pageNumber < pdfDocument.numPages) { ++pageNumber; renderPage(); } });
+e.pagePrev.addEventListener('click', () => { if (pageNumber > 1) { closeAiShare(); --pageNumber; renderPage(); } });
+e.pageNext.addEventListener('click', () => { if (pdfDocument && pageNumber < pdfDocument.numPages) { closeAiShare(); ++pageNumber; renderPage(); } });
 e.pageNumber.addEventListener('change', () => {
   if (!pdfDocument) return;
+  closeAiShare();
   pageNumber = Math.max(1, Math.min(pdfDocument.numPages, parseInt(e.pageNumber.value, 10) || 1)); renderPage();
 });
 e.zoomIn.addEventListener('click', () => { zoom = Math.min(3, zoom + 0.25); renderPage(); });
@@ -512,6 +546,7 @@ e.readerNativeOpen.addEventListener('click', () => {
 });
 
 async function lock(message = '') {
+  closeAiShare();
   ++openGeneration;
   ++queryRequest;
   clearTimeout(debounce);
