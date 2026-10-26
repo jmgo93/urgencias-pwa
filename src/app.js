@@ -24,6 +24,8 @@ import pdfWorkerURL from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
 const ui = mountUI(document.querySelector('#app'));
 const e = ui.elements;
+const resultsViewPreference = 'urgencias-result-view-v1';
+try { e.compactResults.checked = localStorage.getItem(resultsViewPreference) === 'titles'; } catch {}
 const base = new URL('./', document.baseURI);
 const libraryURL = new URL('library/', base);
 setupInstallation(e.installButton);
@@ -294,13 +296,20 @@ function onSearchMessage({ data }) {
   clearTimeout(historyDebounce);
   historyDebounce = setTimeout(() => rememberSearch({ automatic: true }), 1200);
   results = data.results;
-  ui.renderResults(results, session.corpus.sections);
+  ui.renderResults(results, session.corpus.sections, { compact: e.compactResults.checked });
   ui.renderInterpretation(data.interpretation);
   const total = data.totalDocuments ?? new Set(results.map(item => item.documentId)).size;
   e.resultCount.textContent = `${results.length} destinos · ${total} ${total === 1 ? 'documento relacionado' : 'documentos relacionados'}`;
   e.searchStatus.textContent = `${data.durationMs.toFixed(0)} ms de búsqueda · ${data.total} fragmentos relacionados${data.total > results.length ? ' · se muestran los destinos más relevantes' : ''}`;
   if (data.interpretation.ambiguous?.length) e.searchStatus.textContent += ` · ${data.interpretation.ambiguous.join(' ')}`;
 }
+e.compactResults.addEventListener('change', () => {
+  try { localStorage.setItem(resultsViewPreference, e.compactResults.checked ? 'titles' : 'expanded'); } catch {}
+  if (!session || e.searchSummary.hidden) return;
+  const count = e.resultCount.textContent;
+  ui.renderResults(results, session.corpus.sections, { compact: e.compactResults.checked });
+  e.resultCount.textContent = count;
+});
 function search() {
   clearTimeout(debounce);
   clearTimeout(historyDebounce);
@@ -518,6 +527,8 @@ function returnToSearch() {
   ui.showView('search');
   window.scrollTo(0, searchScroll);
   const button = [...e.results.querySelectorAll('[data-open-result]')].find(item => item.dataset.openResult === currentResult?.id);
+  const disclosure = button?.closest('details.result-card');
+  if (disclosure) disclosure.open = true;
   button?.focus({ preventScroll: true });
 }
 e.readerBack.addEventListener('click', () => {

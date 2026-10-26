@@ -23,6 +23,7 @@ La [guía de primera prueba](docs/PRIMERA_PRUEBA_LOCAL.md) explica los controles
 - Índice preparado guardado cifrado en este dispositivo para reutilizarlo al abrir; no se vuelve a construir en cada inicio. Puedes escribir mientras termina de preparar la primera búsqueda.
 - Historial privado local de las últimas 20 búsquedas: repite una consulta con sus filtros o utiliza **Borrar historial** para retirarlo sin borrar la biblioteca.
 - Filtros por sección y por capítulos o casos, con conexiones explicadas, coincidencias y términos ausentes en cada fragmento.
+- Vista **Sólo títulos**, activable en los resultados: toca un título para desplegar su resumen y utiliza **Abrir página** para consultar el PDF. Desactívala para volver a ver todas las sugerencias completas. La elección se conserva en este navegador.
 - Lector de PDF con página original y página del documento pequeño, navegación, zoom y texto extraído. Conserva consulta, filtros, resultados y posición al volver.
 - Biblioteca local de **244 PDF: 198 capítulos, 45 casos y un documento de preliminares**, que cubren las **1.101 páginas** del libro. Las **32 páginas con OCR** están identificadas.
 - Catálogo, texto y PDF cifrados; contraseña inicial y apertura automática en un dispositivo recordado. **Olvidar este dispositivo** retira el acceso guardado y cierra la sesión sin borrar la biblioteca. Si se desmarca **Recordar este dispositivo**, la clave queda sólo en memoria y vuelve el bloqueo tras 15 minutos de inactividad.

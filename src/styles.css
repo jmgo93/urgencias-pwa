@@ -147,8 +147,27 @@ button { color: inherit; }
 .source-note { display: flex; align-items: center; gap: 6px; color: var(--md-sys-color-on-surface-variant); font-size: 14px; }
 .source-note .icon { width: 14px; height: 14px; }
 .results { display: flex; flex-direction: column; gap: 14px; }
+.results-display-switch { position: relative; display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 8px 12px; flex-shrink: 0; border: 1px solid var(--md-sys-color-outline-variant); border-radius: 100px; background: var(--md-sys-color-surface-container-low); font-size: 17px; font-weight: 700; line-height: 1.5; cursor: pointer; user-select: none; }
+.results-display-switch > input { position: absolute; width: 48px; height: 48px; margin: 0; opacity: 0; }
+.results-switch-track { display: flex; align-items: center; width: 48px; height: 28px; box-sizing: border-box; flex-shrink: 0; padding: 3px; border: 2px solid var(--md-sys-color-outline); border-radius: 100px; background: var(--md-sys-color-surface-container-highest); }
+.results-switch-track > span { display: block; width: 18px; height: 18px; flex-shrink: 0; border-radius: 50%; background: var(--md-sys-color-outline); transition: transform .16s ease, background .16s ease; }
+.results-display-switch > input:checked + .results-switch-track { border-color: var(--md-sys-color-primary); background: var(--md-sys-color-primary); }
+.results-display-switch > input:checked + .results-switch-track > span { transform: translateX(20px); background: var(--md-sys-color-on-primary); }
+.results-display-switch:focus-within { outline: 2px solid var(--md-sys-color-primary); outline-offset: 3px; }
+.results-display-switch:has(input:checked) { border-color: var(--md-sys-color-primary); }
 .result-card { display: flex; gap: 20px; padding: 24px 26px 20px 22px; border: 1px solid var(--md-sys-color-outline-variant); border-radius: 19px; background: var(--md-sys-color-surface-container-lowest); transition: border-color .16s ease, box-shadow .16s ease; }
 .result-card:hover { border-color: color-mix(in srgb, var(--md-sys-color-primary) 50%, var(--md-sys-color-outline-variant)); box-shadow: 0 5px 18px color-mix(in srgb, var(--md-sys-color-shadow) 3%, transparent); }
+.result-card.result-card-compact { display: block; padding: 0; }
+.result-summary { min-height: 48px; padding: 16px 22px; cursor: pointer; list-style: none; border-radius: inherit; }
+.result-summary::-webkit-details-marker { display: none; }
+.result-card .result-summary h2 { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0; color: var(--md-sys-color-on-surface); font: 600 20px/1.5 var(--font-heading); letter-spacing: -.35px; }
+.result-summary h2 > span { min-width: 0; overflow-wrap: anywhere; }
+.result-summary:focus-visible { outline: 2px solid var(--md-sys-color-primary); outline-offset: 3px; }
+.result-summary:hover h2 { color: var(--md-sys-color-primary); }
+.result-chevron { flex-shrink: 0; width: 22px; height: 22px; color: var(--md-sys-color-primary); transition: transform .16s ease; }
+.result-card-compact[open] > .result-summary .result-chevron { transform: rotate(90deg); }
+.result-card-compact[open] > .result-summary { border-radius: 19px 19px 0 0; }
+.result-details { padding: 0 24px 22px; }
 .result-rank { color: var(--md-sys-color-primary); font-family: var(--font-heading); font-size: 17px; font-weight: 600; line-height: 1.5; padding-top: 1px; }
 .result-main { flex: 1; min-width: 0; }
 .result-eyebrow { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; color: var(--md-sys-color-on-surface-variant); font-size: 14px; line-height: 1.6; }
@@ -461,6 +480,10 @@ button, input, select { font-size: 17px; }
 }
 @media (max-width: 520px) {
   .device-access-status { width: calc(100% - 32px); }
+  .results-display-switch { width: 100%; min-height: 52px; }
+  .result-card .result-summary { padding: 14px 16px; }
+  .result-card .result-summary h2 { font-size: 18px; gap: 12px; }
+  .result-details { padding: 0 16px 18px; }
   .search-history { padding: 16px 12px; border-radius: 14px; }
   .search-history-list { grid-template-columns: minmax(0, 1fr); max-height: 280px; gap: 10px; }
   .history-heading { gap: 4px 12px; }
