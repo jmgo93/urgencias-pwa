@@ -27,3 +27,9 @@
 .offline-actions .button { max-width: 100%; min-height: 48px; font-size: 17px; white-space: normal; }
 .offline-remove .button { min-height: 48px; font-size: 16px; text-align: left; }
 @media (max-width: 800px) { .offline-overview { flex-wrap: wrap; align-items: flex-start; } }
+
+/* Keep the ready state short during consultation; opening or focusing restores controls. */
+body:is([data-view="search"], [data-view="reader"]) .offline-panel[data-ready="true"]:not(:has(details[open])):not(:focus-within) { margin-top: 8px; padding: 6px 14px; }
+body:is([data-view="search"], [data-view="reader"]) .offline-panel[data-ready="true"]:not(:has(details[open])):not(:focus-within) :is(#network-status, .offline-actions, .offline-progress) { display: none; }
+body:is([data-view="search"], [data-view="reader"]) .offline-panel[data-ready="true"]:not(:has(details[open])):not(:focus-within) .offline-overview { gap: 0; }
+body:is([data-view="search"], [data-view="reader"]) .offline-panel[data-ready="true"]:not(:has(details[open])):not(:focus-within) summary { display: list-item; min-height: 44px; padding-top: 8px; padding-bottom: 8px; line-height: 1.45; }

@@ -215,7 +215,7 @@ async function openLibrary({ password, savedKey, knownManifest, remember = false
       }
     }
     if (session !== active) return;
-    if (active.remembered) e.deviceAccessStatus.textContent = 'Dispositivo recordado. La biblioteca se abrirá automáticamente, también sin conexión.';
+    if (active.remembered && !savedKey) e.deviceAccessStatus.textContent = 'Dispositivo recordado. La biblioteca se abrirá automáticamente, también sin conexión.';
     e.lockButton.querySelector('span').textContent = active.remembered || active.forgetRequired ? 'Olvidar este dispositivo' : 'Bloquear';
     e.unlockStatus.textContent = '';
     touchSession();
