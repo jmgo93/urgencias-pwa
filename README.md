@@ -2,7 +2,7 @@
 
 Biblioteca personal de consulta documental: escribe una frase, compara los fragmentos relacionados y abre el PDF del capítulo o del caso en la página correspondiente.
 
-La primera versión funciona sin backend ni base de datos. Repositorio: [jmgo93/urgencias-pwa](https://github.com/jmgo93/urgencias-pwa). Aplicación: [Urgencias en GitHub Pages](https://jmgo93.github.io/urgencias-pwa/); el estado del despliegue se comprueba en Actions.
+La primera versión funciona sin backend ni base de datos en servidor. Los datos del dispositivo se guardan localmente. Repositorio: [jmgo93/urgencias-pwa](https://github.com/jmgo93/urgencias-pwa). Aplicación: [Urgencias en GitHub Pages](https://jmgo93.github.io/urgencias-pwa/); el estado del despliegue se comprueba en Actions.
 
 Para usar el libro en el móvil, **instala primero la app y ábrela desde su icono**. Importa entonces el paquete privado `Biblioteca.urgencias` desde la app instalada, pulsa **Preparar uso sin conexión** y espera al estado **Lista para usar sin conexión**. Introduce la contraseña una vez y deja marcado **Recordar este dispositivo**: después la biblioteca se abrirá directamente, incluso sin Internet. La importación es local: no sube el archivo a GitHub. [Guía para el móvil](docs/TRASLADO_AL_MOVIL.md).
 
@@ -63,7 +63,7 @@ La primera preparación del buscador guarda una copia cifrada del índice ya con
 
 El contenido permanece local; cambiar su formato o cifrarlo no concede derechos de distribución. [Separación de archivos personales](docs/ARCHIVOS_PERSONALES.md).
 
-Para crear el archivo que se traslada al móvil, ejecuta `node scripts/pack-library.mjs` después del cifrado. El paquete se genera fuera del repositorio en `biblioteca-local/Para el movil/Biblioteca.urgencias` y no contiene la contraseña. La publicación del código se lanza manualmente con el flujo **Publicar en GitHub Pages**. [Configuración de Pages](docs/PUBLICACION_PAGES.md).
+Para crear el archivo que se traslada al móvil, ejecuta `node scripts/pack-library.mjs` después del cifrado. El paquete se genera fuera del repositorio en `biblioteca-local/Para el movil/Biblioteca.urgencias` y no contiene la contraseña. El flujo **Publicar en GitHub Pages** publica automáticamente los cambios de `main` después de sus comprobaciones; también permite una ejecución manual. [Configuración de Pages](docs/PUBLICACION_PAGES.md).
 
 Para el funcionamiento sin conexión, pulsa **Preparar uso sin conexión** y espera al estado **Lista para usar sin conexión**. La importación necesita espacio para unos 549 MiB de biblioteca cifrada, además del archivo personal y los recursos de la aplicación. La biblioteca se incorpora desde tu archivo; no se descarga de GitHub. Con **Recordar este dispositivo**, puedes cerrar y volver a abrir sin repetir la contraseña y sin bloqueo por inactividad. **Olvidar este dispositivo** borra la clave guardada y mantiene la biblioteca cifrada; la siguiente apertura pedirá la contraseña, también válida sin conexión. Si no recuerdas el dispositivo, se pide al iniciar otra sesión y se aplica el bloqueo de 15 minutos. El navegador puede liberar almacenamiento; conserva el archivo original y usa **Eliminar biblioteca del dispositivo** si deseas borrar la copia guardada en la app. Si instalas la app después de haber usado el navegador, comprueba su estado e importa la biblioteca desde la app instalada cuando sea necesario.
 

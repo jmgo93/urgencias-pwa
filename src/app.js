@@ -749,7 +749,7 @@ e.removeOfflineButton?.addEventListener('click', async () => {
   } finally { e.removeOfflineButton.disabled = false; }
 });
 if ('serviceWorker' in navigator) {
-  serviceWorkerRegistration = navigator.serviceWorker.register(new URL('sw.js', base), { scope: base.pathname })
+  serviceWorkerRegistration = navigator.serviceWorker.register(new URL('sw.js', base), { scope: base.pathname, updateViaCache: 'none' })
     .then(registration => { updateOfflineState(); return registration; })
     .catch(async () => {
       // An update check may fail offline while the installed application is complete.

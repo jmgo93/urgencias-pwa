@@ -15,12 +15,14 @@ const key = (request) => typeof request === 'string' ? request : request.url ?? 
 
 class MemoryCache {
   entries = new Map();
+  precacheRequests = [];
   async match(request) { return this.entries.get(key(request))?.clone(); }
   async put(request, value) { this.entries.set(key(request), value.clone()); }
   async keys() { return [...this.entries.keys()].map((url) => new Request(url)); }
   async delete(request) { return this.entries.delete(key(request)); }
-  async addAll(urls) {
-    for (const url of urls) await this.put(url, response(`saved:${url}`));
+  async addAll(requests) {
+    this.precacheRequests.push(...requests);
+    for (const request of requests) await this.put(request, response(`saved:${key(request)}`));
   }
 }
 class MemoryCaches {
@@ -121,6 +123,21 @@ test('service worker precaches the app, search/PDF workers and every PDF depende
     assert.ok(await cache.match(new URL(path, scope).href), `Missing offline dependency: ${path}`);
   }
   assert.equal((await cache.keys()).some(({ url }) => url.includes('/library/')), false);
+});
+
+test('every installation request bypasses stale HTTP cache, including HTML and worker code', async () => {
+  const sw = await serviceWorker();
+  await sw.lifecycle('install');
+  const [name] = await sw.caches.keys();
+  const cache = await sw.caches.open(name);
+  assert.ok(cache.precacheRequests.length > 0);
+  for (const request of cache.precacheRequests) {
+    assert.ok(request instanceof Request, 'Precache must use explicit Request cache options.');
+    assert.equal(request.cache, 'reload', `May reuse stale HTTP data: ${request.url}`);
+  }
+  for (const path of ['./', 'index.html', 'assets/app-fixture.js', 'assets/search-worker-fixture.js', 'assets/pdf-worker-fixture.mjs']) {
+    assert.ok(cache.precacheRequests.some(request => request.url === new URL(path, scope).href), `Missing fresh install request: ${path}`);
+  }
 });
 
 test('cached application opens immediately without waiting for an unreachable network', async () => {
