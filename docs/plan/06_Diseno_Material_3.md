@@ -2,6 +2,8 @@
 
 > Alcance actualizado: este documento describe el producto completo. La primera implementación es el [buscador PWA estático](14_Plan_PWA_estatica.md), sin backend ni base de datos. Para esa entrega prevalecen los documentos 14-16; se conservan aquí las especificaciones compatibles y la evolución posterior.
 
+> Implementación del 26 de octubre de 2026: la PWA ya utiliza identidad cromática e iconos para sus 25 secciones y estrellas para las mejores coincidencias. Los criterios y componentes efectivamente entregados se describen en [Diseño Material 3 para móvil](../DISENO_MATERIAL3_MOVIL.md); las alternativas pendientes de este plan se refieren a la evolución del producto completo.
+
 **Estado:** v1.1 · alcance actualizado con las respuestas del propietario; identidad visual pendiente de elección entre tres alternativas.  
 **Fecha:** 25 de octubre de 2026.  
 **Ámbito:** aplicación web adaptable e instalable como PWA; experiencia de lectura, consulta y aprendizaje, más herramientas de gestión.  

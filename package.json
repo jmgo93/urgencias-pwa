@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Biblioteca personal de urgencias: búsqueda documental local y lector de PDF cifrados.",
   "scripts": {
-    "tokens": "node scripts/generate-tokens.mjs",
+    "tokens": "node scripts/generate-tokens.mjs && node scripts/generate-section-tokens.mjs",
     "build": "node scripts/vendor.mjs && vite build && node scripts/build-sw.mjs",
     "start": "node scripts/serve.mjs",
     "dev": "node scripts/serve.mjs",
