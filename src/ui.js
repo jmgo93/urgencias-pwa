@@ -28,8 +28,7 @@ export function escapeHtml(value) {
 
 function firstValue(...values) { return values.find((value) => value !== undefined && value !== null && value !== ''); }
 
-export function renderResults(results = [], sections = [], { compact = false } = {}) {
-  return results.map((result, index) => {
+function resultModel(result, index, sections) {
     const fragment = result.fragment || result;
     const span = fragment.spans?.[0] || {};
     const page = firstValue(result.originalPage, fragment.originalPage, span.originalPage, result.page);
@@ -39,7 +38,7 @@ export function renderResults(results = [], sections = [], { compact = false } =
     const sectionTitle = firstValue(result.sectionTitle, fragment.sectionTitle, section?.title, section?.titulo, 'Biblioteca de urgencias');
     const snippet = String(firstValue(result.snippet, result.excerpt, fragment.snippet, fragment.text, '')).replace(/\s+/g, ' ').trim();
     const terms = result.matchedTerms || result.matches || fragment.matchedTerms || [];
-    const matchedTerms = [...new Set(terms.map((term) => typeof term === 'string' ? term : term.term || term.text || term.label).filter(Boolean))].slice(0, 7);
+    const matchedTerms = [...new Set(terms.map((term) => typeof term === 'string' ? term : term.term || term.text || term.label).filter(Boolean))];
     const missingTerms = Array.isArray(result.missingTerms) ? result.missingTerms.map((term) => typeof term === 'string' ? term : term.label || term.term || term.text).filter(Boolean) : [];
     const subsectionTitle = String(firstValue(result.subsectionTitle, fragment.subsectionTitle) ?? '').trim();
     const showSubsection = subsectionTitle && subsectionTitle.length <= 180 && subsectionTitle.toLocaleLowerCase('es') !== String(title).toLocaleLowerCase('es');
@@ -51,24 +50,61 @@ export function renderResults(results = [], sections = [], { compact = false } =
     const bytes = Number(result.bytes ?? fragment.bytes);
     const pageCount = Number(result.pageCount ?? fragment.pageCount);
     const fileMeta = [Number.isFinite(bytes) && bytes > 0 ? `${(bytes / 1048576).toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} MiB` : '', Number.isFinite(pageCount) && pageCount > 0 ? `${pageCount} ${pageCount === 1 ? 'página' : 'páginas'}` : ''].filter(Boolean).join(' · ');
-    const eyebrow = `<div class="result-eyebrow">${icon('layers')}<span>${escapeHtml(sectionTitle)}</span>${isOcr ? '<span class="badge badge-warning">OCR pendiente de revisión</span>' : ''}</div>`;
-    const content = `${showSubsection ? `<p class="subsection-reference">Referencia de texto: ${escapeHtml(subsectionTitle)}</p>` : ''}
-        <p class="result-snippet">${escapeHtml(snippet.length > 320 ? `${snippet.slice(0, 317)}…` : snippet)}</p>
-        ${matchedTerms.length ? `<div class="match-list" aria-label="Términos encontrados">${matchedTerms.map((term) => `<span class="match-chip">${icon('check')}${escapeHtml(term)}</span>`).join('')}</div>` : ''}
-        ${missingTerms.length ? `<p class="missing-terms">Sin coincidencia en este fragmento: ${escapeHtml(missingTerms.join(', '))}.</p>` : ''}
-        <div class="result-bottom"><div class="result-location">${icon('page')}<span>${escapeHtml(meta || sourceLabel)}</span>${fileMeta ? `<span class="file-meta">${escapeHtml(fileMeta)}</span>` : ''}<span class="source-edition">Libro · 2018</span></div><button class="open-result-button" type="button" data-open-result="${escapeHtml(id)}">Abrir página ${icon('arrow')}</button></div>`;
-    if (compact) return `<details class="result-card result-card-compact" data-result-id="${escapeHtml(id)}">
-      <summary class="result-summary"><h2><span>${escapeHtml(title)}</span>${icon('chevronRight', 'result-chevron')}</h2></summary>
-      <div class="result-details">${eyebrow}${content}</div>
-    </details>`;
-    return `<article class="result-card" data-result-id="${escapeHtml(id)}">
-      <div class="result-rank" aria-hidden="true">${String(index + 1).padStart(2, '0')}</div>
-      <div class="result-main">
-        ${eyebrow}
-        <h2><button type="button" class="result-title-button" data-open-result="${escapeHtml(id)}">${escapeHtml(title)}</button></h2>
-        ${content}
+    const documentId = firstValue(result.documentId, fragment.documentId, span.documentId);
+    return { id, documentId, documentKey: documentId === undefined ? `result:${index}` : `document:${documentId}`,
+      page, localPage, title, sectionTitle, snippet, matchedTerms, missingTerms, subsectionTitle,
+      showSubsection, isOcr, sourceLabel, meta, fileMeta, score: Number(result.score) || 0,
+      occurrenceStart: Number(result.occurrenceStart) || 0, index };
+}
+
+function groupResults(results, sections) {
+  const documents = new Map();
+  results.forEach((result, index) => {
+    const row = resultModel(result, index, sections);
+    let group = documents.get(row.documentKey);
+    if (!group) { group = { best: row, pages: new Map(), count: 0 }; documents.set(row.documentKey, group); }
+    if (row.score > group.best.score) group.best = row;
+    const pageKey = row.localPage !== undefined ? `local:${row.localPage}` : row.page !== undefined ? `original:${row.page}` : `result:${index}`;
+    if (!group.pages.has(pageKey)) group.pages.set(pageKey, { page: row.page, localPage: row.localPage, rows: [] });
+    group.pages.get(pageKey).rows.push(row);
+    group.count += 1;
+  });
+  return [...documents.values()].sort((a, b) => b.best.score - a.best.score || a.best.index - b.best.index);
+}
+
+function renderOccurrence(row, index) {
+  return `<article class="result-occurrence" data-occurrence-id="${escapeHtml(row.id)}">
+    <div class="occurrence-heading"><strong>Coincidencia ${index + 1}</strong>${row.isOcr ? '<span class="badge badge-warning">OCR pendiente de revisión</span>' : ''}</div>
+    ${row.showSubsection ? `<p class="subsection-reference">Referencia de texto: ${escapeHtml(row.subsectionTitle)}</p>` : ''}
+    <p class="result-snippet">${escapeHtml(row.snippet.length > 320 ? `${row.snippet.slice(0, 317)}…` : row.snippet)}</p>
+    ${row.matchedTerms.length ? `<div class="match-list" aria-label="Términos encontrados">${row.matchedTerms.map((term) => `<span class="match-chip">${icon('check')}${escapeHtml(term)}</span>`).join('')}</div>` : ''}
+    ${row.missingTerms.length ? `<p class="missing-terms">Sin coincidencia en este fragmento: ${escapeHtml(row.missingTerms.join(', '))}.</p>` : ''}
+    <div class="result-bottom"><span class="occurrence-location">${escapeHtml(row.meta || row.sourceLabel)}</span><button class="open-result-button" type="button" data-open-result="${escapeHtml(row.id)}">Abrir página ${icon('arrow')}</button></div>
+  </article>`;
+}
+
+export function renderResults(results = [], sections = [], { compact = false } = {}) {
+  return groupResults(results, sections).map((group) => {
+    const best = group.best;
+    const pages = [...group.pages.values()].sort((a, b) => Number(a.localPage ?? a.page ?? Infinity) - Number(b.localPage ?? b.page ?? Infinity));
+    const countLabel = `${pages.length} ${pages.length === 1 ? 'página' : 'páginas'} con ${group.count} ${group.count === 1 ? 'coincidencia' : 'coincidencias'}`;
+    const pageList = pages.map((page) => {
+      const rows = page.rows.sort((a, b) => a.occurrenceStart - b.occurrenceStart || a.index - b.index);
+      const isBest = rows.some((row) => row.id === best.id);
+      const label = [page.page ? `Pág. ${page.page} del libro` : 'Página del libro', page.localPage ? `pág. ${page.localPage} del PDF` : ''].filter(Boolean).join(' · ');
+      return `<details class="result-page" data-local-page="${escapeHtml(page.localPage ?? '')}"${isBest ? ' open' : ''}>
+        <summary class="result-page-summary"><span><strong>${escapeHtml(label)}</strong><span class="page-match-count">${rows.length} ${rows.length === 1 ? 'coincidencia' : 'coincidencias'}${isBest ? ' · mejor coincidencia' : ''}</span></span>${icon('chevronRight', 'result-chevron')}</summary>
+        <div class="result-page-occurrences">${rows.map(renderOccurrence).join('')}</div>
+      </details>`;
+    }).join('');
+    return `<details class="result-card result-document-card${compact ? ' result-card-compact' : ''}" data-document-id="${escapeHtml(best.documentId ?? '')}" data-result-id="${escapeHtml(best.id)}"${compact ? '' : ' open'}>
+      <summary class="result-summary"><h2><span>${escapeHtml(best.title)}</span>${icon('chevronRight', 'result-chevron')}</h2><span class="document-match-count">${escapeHtml(countLabel)}</span></summary>
+      <div class="result-details"><div class="result-eyebrow">${icon('layers')}<span>${escapeHtml(best.sectionTitle)}</span></div>
+        <div class="document-file-meta">${best.fileMeta ? `<span class="file-meta">${escapeHtml(best.fileMeta)}</span>` : ''}<span class="source-edition">Libro · 2018</span></div>
+        <p class="document-results-help">Elige una página para ver sus coincidencias y abrir el PDF.</p>
+        <div class="result-pages">${pageList}</div>
       </div>
-    </article>`;
+    </details>`;
   }).join('');
 }
 
@@ -119,11 +155,13 @@ export function mountUI(root) {
         <div id="empty-state" class="empty-state"><div class="empty-heading"><span class="soft-icon">${icon('spark')}</span><div><h2>Empieza por lo que tienes en mente</h2><p>Una palabra, una pregunta o una combinación de conceptos.</p></div></div><div class="example-grid">${exampleQueries.map((query, index) => `<button type="button" class="example-card" data-query="${escapeHtml(query)}"><span class="example-number">0${index + 1}</span><span>${escapeHtml(query)}</span>${icon('arrow')}</button>`).join('')}</div><div class="how-it-works"><div><span class="step-number">1</span><div><strong>Describe lo que buscas</strong><p>Busca todos los conceptos y admite sus sinónimos.</p></div></div><div><span class="step-number">2</span><div><strong>Explora las conexiones</strong><p>Compara los fragmentos y sus coincidencias.</p></div></div><div><span class="step-number">3</span><div><strong>Abre la página exacta</strong><p>Lee el capítulo y vuelve a tus resultados.</p></div></div></div></div>
         <div id="search-summary" class="search-summary" hidden><div><h2 id="result-count">Resultados</h2><p>Todos los conceptos · mejores coincidencias primero</p></div><label class="results-display-switch"><input id="compact-results" type="checkbox" role="switch" aria-controls="results" /><span class="results-switch-track" aria-hidden="true"><span></span></span><span>Sólo títulos</span></label><span class="source-note">${icon('info')}Relevancia documental, no probabilidad diagnóstica</span></div>
         <div id="results" class="results" aria-label="Resultados de la búsqueda"></div>
+        <button id="more-results" class="button button-tonal more-results" type="button" hidden>Mostrar más PDF</button>
       </section>
       <section id="reader-view" class="reader-view" hidden aria-labelledby="reader-title">
-        <div class="reader-heading"><button id="reader-back" class="button button-text" type="button">${icon('back')}Volver a resultados</button><div class="suggestion-nav"><button id="reader-result-prev" class="icon-button" type="button" aria-label="Abrir sugerencia anterior" title="Sugerencia anterior">${icon('chevronLeft')}</button><span>Otras sugerencias</span><button id="reader-result-next" class="icon-button" type="button" aria-label="Abrir sugerencia siguiente" title="Sugerencia siguiente">${icon('chevronRight')}</button></div></div>
+        <div class="reader-heading"><button id="reader-back" class="button button-text" type="button">${icon('back')}Volver a resultados</button><div class="suggestion-nav"><button id="reader-result-prev" class="icon-button" type="button" aria-label="Coincidencia anterior" title="Coincidencia anterior">${icon('chevronLeft')}</button><span>Otras coincidencias</span><button id="reader-result-next" class="icon-button" type="button" aria-label="Coincidencia siguiente" title="Coincidencia siguiente">${icon('chevronRight')}</button></div></div>
         <div class="reader-title-row"><div><h1 id="reader-title">Documento</h1><p id="reader-location"></p></div><span class="badge">Fuente original · 2018</span></div>
         <p id="reader-evidence" class="reader-evidence"></p>
+        <div id="reader-occurrences" class="reader-occurrences" hidden><label for="reader-occurrence">Coincidencias en este PDF</label><select id="reader-occurrence"></select></div>
         <div class="reader-toolbar"><div class="reader-paging"><button id="page-prev" class="icon-button" type="button" aria-label="Página anterior" title="Página anterior">${icon('chevronLeft')}</button><label for="page-number">Página</label><input id="page-number" type="number" min="1" value="1" inputmode="numeric" /><span>de <span id="page-total">1</span></span><button id="page-next" class="icon-button" type="button" aria-label="Página siguiente" title="Página siguiente">${icon('chevronRight')}</button></div><div class="reader-tools"><button id="zoom-out" class="icon-button" type="button" aria-label="Reducir tamaño" title="Reducir tamaño">${icon('zoomOut')}</button><button id="zoom-in" class="icon-button" type="button" aria-label="Ampliar tamaño" title="Ampliar tamaño">${icon('zoomIn')}</button><span class="toolbar-divider"></span><button id="reader-text-toggle" class="button button-text button-compact" type="button" aria-expanded="false" aria-controls="reader-text">${icon('text')}<span>Ver texto</span></button><button id="reader-ai-share" class="button button-tonal button-compact" type="button" aria-haspopup="dialog" disabled>${icon('spark')}<span>Consultar con IA</span></button><button id="reader-native-open" class="icon-button" type="button" aria-label="Abrir PDF en otra pestaña" title="Abrir PDF en otra pestaña">${icon('external')}</button></div></div>
         <p id="reader-status" class="reader-status" role="status" aria-live="polite"></p><div class="reader-stage"><canvas id="reader-canvas" aria-label="Página del documento original"></canvas></div><div id="reader-text" class="reader-text" hidden></div>
       </section>
@@ -150,7 +188,8 @@ export function mountUI(root) {
       elements.results.innerHTML = renderResults(results, sections, options);
       elements['empty-state'].hidden = true;
       elements['search-summary'].hidden = false;
-      elements['result-count'].textContent = `${results.length} ${results.length === 1 ? 'resultado' : 'resultados'}`;
+      const documentCount = groupResults(results, sections).length;
+      elements['result-count'].textContent = `${documentCount} PDF con coincidencias`;
       if (!results.length) elements.results.innerHTML = `<div class="no-results">${icon('search')}<h3>Ningún fragmento reúne lo que buscas</h3><p>Quita algún concepto, prueba un sinónimo o cambia los filtros. No se incluyen coincidencias parciales.</p></div>`;
     },
     setSearchBusy(busy) { elements['search-button'].disabled = busy; elements.results.setAttribute('aria-busy', String(busy)); elements['search-view'].classList.toggle('is-searching', busy); },

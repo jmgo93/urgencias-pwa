@@ -32,6 +32,13 @@ test('restoring a serialized prepared engine skips indexing and preserves retrie
   assert.equal(restored.restored, true);
   assert.equal(restored.fragmentCount, 5);
   assert.deepEqual(progress, [], 'A valid prepared index must not rebuild any text batches.');
+  const grouped = restored.search('dolor torácico', { limit: 1 });
+  assert.deepEqual(grouped.results.map((row) => row.id), ['one', 'two', 'three']);
+  assert.equal(grouped.total, 4);
+  assert.equal(grouped.totalDocuments, 2);
+  assert.equal(grouped.totalPages, 3);
+  assert.equal(new Set(grouped.results.map((row) => row.documentId)).size, 1);
+  assert.deepEqual(comparable(grouped), comparable(fresh.search('dolor torácico', { limit: 1 })));
   for (const query of ['disnea dolor torácico', 'sin fiebre disnea', 'blood gas ECG', 'menigitis',
     'hiponatr', 'menigitis hiponatr', 'hiponatr síncope', 'disnea hiponatr',
     'disnea dolor torácico qwertyxyz', 'niña', 'nina', 'PCR', '"disnea y dolor torácico"', 'qwertyxyz', '']) {

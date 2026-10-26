@@ -31,20 +31,20 @@ En **Últimas búsquedas** aparecen hasta 20 consultas recientes, guardadas cifr
 
 La búsqueda combina términos literales con un vocabulario inicial de sinónimos y siglas. No interpreta cualquier frase como un diagnóstico ni calcula probabilidades de enfermedad. Las expresiones desconocidas siguen buscando por sus palabras; la cobertura del vocabulario se ampliará tras la prueba.
 
-Puedes limitar los resultados a una sección o elegir **Capítulos** o **Casos clínicos**. Cada tarjeta presenta el fragmento, los términos encontrados, los términos que faltan en ese fragmento cuando corresponda, la página original y la página del PDF pequeño. También indica el tamaño y el número de páginas del documento.
+Puedes limitar los resultados a una sección o elegir **Capítulos** o **Casos clínicos**. Añadir conceptos afirmados exige que aparezcan juntos, admitiendo sinónimos. Cada PDF aparece una sola vez, con el número de páginas y pasajes coincidentes. Toca su título para desplegarlo y elige una página: dentro están todos los pasajes encontrados, sus términos y sus referencias original y local. También se indican el tamaño y el número de páginas del documento. **Sólo títulos** permite cerrar todas las tarjetas; **Mostrar más PDF** añade documentos cuando la búsqueda supera los 30 iniciales.
 
 Una «referencia de texto» es un candidato obtenido de la extracción; no implica que la subsección o sus coordenadas estén verificadas. Las páginas con reconocimiento OCR se identifican como pendientes de revisión.
 
 ## Leer y volver
 
-Pulsa **Abrir página** o el título de una tarjeta. La aplicación carga sólo el PDF del capítulo o del caso seleccionado, no el libro completo de 1.101 páginas.
+Despliega el PDF y la página que te interese y pulsa **Abrir página** en un pasaje. La aplicación carga sólo el PDF del capítulo o del caso seleccionado, no el libro completo de 1.101 páginas.
 
 - Las flechas junto al número de página recorren el documento; puedes escribir un número de página local.
 - Los botones de zoom ajustan el tamaño. En pantallas pequeñas el documento puede desplazarse horizontalmente al ampliarlo.
 - **Ver texto** muestra el texto extraído de la página; la imagen del PDF conserva tablas, figuras y disposición originales.
 - El botón de apertura externa permite consultar el PDF descifrado en otra pestaña durante la sesión.
-- Las flechas de **Otras sugerencias** cambian al resultado anterior o siguiente.
-- **Volver a resultados** conserva la consulta, los filtros, las sugerencias y la posición de lectura de la lista.
+- **Coincidencias en este PDF** permite elegir cualquiera de sus pasajes encontrados; las flechas de **Otras coincidencias** recorren los pasajes en orden de documento y página.
+- **Volver a resultados** conserva la consulta, los filtros y las sugerencias, y despliega el PDF y la página del pasaje seleccionado.
 
 La referencia más fiable para la presentación de tablas y algoritmos es el PDF original. El libro es de 2018 y esta versión ofrece consulta documental, sin actualización clínica automática.
 

@@ -1,27 +1,27 @@
 # Pruebas de búsqueda local
 
-Medición: 2026-10-26T15:45:32.862Z. Motor ejecutado con v24.16.0; biblioteca personal de 244 documentos y 4074 fragmentos. No se incorpora texto del libro a este informe.
+Medición: 2026-10-26T16:02:32.779Z. Motor ejecutado con v24.16.0; biblioteca personal de 244 documentos y 4074 fragmentos. No se incorpora texto del libro a este informe.
 
-La primera construcción del índice tardó **5298.23 ms**. Después de 10 rondas de calentamiento se midieron 50 rondas de cada consulta (600 búsquedas): mediana **17.47 ms**, percentil 95 **42.71 ms** y máximo **94.22 ms**. Son medidas del motor local; no incluyen descifrado, red, pintado de interfaz ni carga del PDF y no garantizan el mismo resultado en otro dispositivo.
+La primera construcción del índice tardó **5193.99 ms**. Después de 10 rondas de calentamiento se midieron 50 rondas de cada consulta (600 búsquedas): mediana **30.56 ms**, percentil 95 **49.96 ms** y máximo **71.77 ms**. Son medidas del motor local; no incluyen descifrado, red, pintado de interfaz ni carga del PDF y no garantizan el mismo resultado en otro dispositivo.
 
 | Consulta | Documentos encontrados | Primera ejecución (ms) | Mediana (ms) | p95 (ms) |
 | --- | ---: | ---: | ---: | ---: |
-| disnea | 73 | 150.77 | 16.07 | 32.78 |
-| disnea dolor torácico | 26 | 40.33 | 34.39 | 48.42 |
-| disnea dolor torácico taquicardia | 8 | 40.24 | 39.37 | 50.53 |
-| gasometría acidosis | 45 | 21.46 | 17.61 | 32.36 |
-| sin fiebre disnea | 73 | 48.15 | 31.33 | 55.23 |
-| menigitis | 35 | 21.53 | 6.18 | 13.01 |
-| tromboembolismo | 41 | 13.44 | 5.44 | 13.27 |
-| hiponatremia convulsiones | 6 | 19.95 | 10.7 | 15.68 |
-| "edema agudo de pulmón" | 33 | 42.34 | 29.54 | 48.86 |
-| ECG síncope | 6 | 7.72 | 6.6 | 9.83 |
-| anamnesis dolor abdominal vómitos | 33 | 21.68 | 19.3 | 29.6 |
-| qwertyxyz | 0 | 1.23 | 0.27 | 0.49 |
+| disnea | 73 | 90.13 | 33.48 | 41.82 |
+| disnea dolor torácico | 26 | 54.09 | 41.22 | 50.99 |
+| disnea dolor torácico taquicardia | 8 | 48.6 | 44.06 | 53.12 |
+| gasometría acidosis | 45 | 32.1 | 22.5 | 31.54 |
+| sin fiebre disnea | 73 | 63.82 | 48.94 | 58.51 |
+| menigitis | 35 | 23.43 | 17.99 | 24.72 |
+| tromboembolismo | 41 | 18.58 | 18.86 | 23.93 |
+| hiponatremia convulsiones | 6 | 14.01 | 12.23 | 16.27 |
+| "edema agudo de pulmón" | 33 | 70.29 | 40.08 | 57.49 |
+| ECG síncope | 6 | 9.18 | 7.22 | 14.48 |
+| anamnesis dolor abdominal vómitos | 33 | 40.87 | 32.27 | 40.06 |
+| qwertyxyz | 0 | 1.29 | 0.29 | 0.4 |
 
-Se verificó la correspondencia de página original y página local en todos los resultados de las 600 consultas. Las pruebas unitarias cubren coincidencia conjunta de grupos positivos, reducción progresiva, equivalencias documentales español/inglés, acentos conservando ñ, palabras cortadas entre líneas, negaciones, frases entre comillas, siglas ambiguas, erratas, términos nuevos, filtros, agrupación, restauración del índice y ciclo de vida del worker.
+Se verificó la correspondencia de página original y página local en todos los resultados de las 600 consultas. Las pruebas unitarias cubren coincidencia conjunta de grupos positivos, reducción progresiva, equivalencias documentales español/inglés, acentos conservando ñ, palabras cortadas entre líneas, negaciones, frases entre comillas, siglas ambiguas, erratas, términos nuevos, filtros, agrupación por PDF, todas las páginas y varias ocurrencias en una misma página, restauración del índice y ciclo de vida del worker.
 
-Reducción comprobada al añadir grupos: «disnea»: 172 fragmentos en 73 documentos → «disnea dolor torácico»: 41 fragmentos en 26 documentos → «disnea dolor torácico taquicardia»: 11 fragmentos en 8 documentos. Los destinos mostrados tienen un límite de 30 y de tres páginas por documento; esos límites pueden cambiar qué destinos aparecen aunque el conjunto completo se reduzca.
+Reducción comprobada al añadir grupos: «disnea»: 172 fragmentos en 73 documentos → «disnea dolor torácico»: 41 fragmentos en 26 documentos → «disnea dolor torácico taquicardia»: 11 fragmentos en 8 documentos. Se seleccionan inicialmente hasta 30 PDF por su mejor coincidencia y se devuelven todas las ocurrencias de cada PDF seleccionado, sin límite de tres páginas ni deduplicación que elimine fragmentos distintos de una página. El parámetro limit cuenta PDF (entre 1 y 1.000, por defecto 30) y permite ampliar la lista hasta cubrir la biblioteca. Dentro del PDF se ordenan por página y posición de lectura. Los contadores globales de documentos, páginas y fragmentos incluyen también los PDF que queden fuera del límite.
 
 Cada resultado requiere todos los grupos positivos en el mismo fragmento y su contexto de título. Los sinónimos de un grupo son alternativas; no se incorporan coincidencias parciales cuando falta otro grupo. Dentro del conjunto válido, se prioriza evidencia en el cuerpo, coincidencia literal, títulos y proximidad. La clasificación indica relevancia documental.
 
