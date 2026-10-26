@@ -146,6 +146,15 @@ async function openLibrary({ password, savedKey, knownManifest, remember = false
     password = undefined;
     active = { key, manifest, corpus: null, worker: null, remembered: Boolean(savedKey), ready: false, history: [] };
     session = active;
+    e.sectionFilter.disabled = true;
+    e.kindFilter.disabled = true;
+    if (savedKey) {
+      ui.setLocked(false);
+      e.startupStatus.textContent = 'Abriendo tu búsqueda…';
+      history.replaceState({}, '', base.pathname);
+      window.scrollTo(0, 0);
+      e.query.focus({ preventScroll: true });
+    }
     const [bytes, preparedSearch, searchHistory] = await Promise.all([
       readAsset('corpus', active), readPreparedSearch(manifest, key), readSearchHistory(manifest, key),
     ]);
@@ -155,6 +164,8 @@ async function openLibrary({ password, savedKey, knownManifest, remember = false
     active.corpus = corpus;
     active.history = searchHistory;
     e.sectionFilter.innerHTML = '<option value="">Todas las secciones</option>' + corpus.sections.map(section => `<option value="${escapeHtml(section.id)}">${escapeHtml(section.title)}</option>`).join('');
+    e.sectionFilter.disabled = false;
+    e.kindFilter.disabled = false;
     e.libraryTitle.textContent = `${corpus.documents.length} documentos · ${corpus.sourcePageCount} páginas`;
     ui.renderHistory(active.history);
     ui.setLocked(false);
@@ -253,7 +264,7 @@ function onSearchMessage({ data }) {
   if (data.type === 'error') { e.searchStatus.textContent = data.message; return; }
   if (data.type !== 'results') return;
   clearTimeout(historyDebounce);
-  historyDebounce = setTimeout(rememberSearch, 1200);
+  historyDebounce = setTimeout(() => rememberSearch({ automatic: true }), 1200);
   results = data.results;
   ui.renderResults(results, session.corpus.sections);
   ui.renderInterpretation(data.interpretation);
@@ -287,11 +298,13 @@ function search() {
   session.worker.postMessage({ type: 'search', requestId: queryRequest, query,
     filters: { sectionId: e.sectionFilter.value, kind: e.kindFilter.value, limit: 30 } });
 }
-function rememberSearch() {
+function rememberSearch({ automatic = false } = {}) {
   clearTimeout(historyDebounce);
   const active = session;
   const query = e.query.value.trim().replace(/\s+/g, ' ').slice(0, 500);
   if (!active || active.forgetting || !query) return;
+  if (automatic && active.historyCleared) return;
+  if (!automatic) active.historyCleared = false;
   const entry = { query, sectionId: e.sectionFilter.value, kind: e.kindFilter.value, lastUsedAt: Date.now() };
   const identity = value => JSON.stringify([value.query.toLocaleLowerCase('es'), value.sectionId, value.kind]);
   active.history = [entry, ...active.history.filter(value => identity(value) !== identity(entry))].slice(0, 20);
@@ -302,9 +315,8 @@ function rememberSearch() {
   }).catch(() => { if (session === active) e.startupStatus.textContent = 'La búsqueda funciona, pero no se pudo guardar el historial en este dispositivo.'; });
 }
 e.searchForm.addEventListener('submit', event => { event.preventDefault(); rememberSearch(); search(); });
-e.query.addEventListener('input', () => { ++queryRequest; clearTimeout(debounce); clearTimeout(historyDebounce); debounce = setTimeout(search, 180); });
-e.sectionFilter.addEventListener('change', search);
-e.kindFilter.addEventListener('change', search);
+e.query.addEventListener('input', () => { if (session) session.historyCleared = false; ++queryRequest; clearTimeout(debounce); clearTimeout(historyDebounce); debounce = setTimeout(search, 180); });
+for (const filter of [e.sectionFilter, e.kindFilter]) filter.addEventListener('change', () => { if (session) session.historyCleared = false; search(); });
 e.clearQuery.addEventListener('click', () => { clearTimeout(historyDebounce); e.query.value = ''; search(); e.query.focus(); });
 document.addEventListener('click', event => {
   const example = event.target.closest('[data-query]');
@@ -328,6 +340,7 @@ e.clearHistoryButton.addEventListener('click', async () => {
   const active = session;
   if (!active || active.forgetting) return;
   const previousHistory = active.history.slice();
+  active.historyCleared = true;
   active.history = [];
   ui.renderHistory([]);
   e.query.focus({ preventScroll: true });
