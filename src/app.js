@@ -4,10 +4,12 @@ import '@fontsource/nunito/latin-700.css';
 import '@fontsource/poppins/latin-600.css';
 import '@fontsource/poppins/latin-700.css';
 import './styles.css';
+import './section-tokens.css';
 import './reader.css';
 import './offline.css';
 import './ai-share.css';
-import { mountUI, escapeHtml } from './ui.js';
+import { mountUI, escapeHtml, renderSectionBadge } from './ui.js';
+import { sectionTheme } from './section-themes.js';
 import { deriveLibraryKey, decryptAsset } from './crypto.js';
 import { inspectBundle, verifyBundleEntry } from './bundle.js';
 import { reconstructPage } from './page-text.js';
@@ -454,14 +456,21 @@ async function closePDF() {
   e.readerTextToggle.querySelector('span').textContent = 'Ver texto';
   try { await disposePDFTask(previousTask); } catch { console.warn('El lector no pudo completar su cierre.'); }
 }
+function bestResultInDocument(documentId) {
+  return results.filter(item => item.documentId === documentId).reduce((best, item) => (
+    !best || (Number(item.score) || 0) > (Number(best.score) || 0) ? item : best
+  ), undefined);
+}
 function populateReaderOccurrences() {
   const rows = results.filter(item => item.documentId === pdfDocumentId);
+  const best = bestResultInDocument(pdfDocumentId);
   const placeholder = new Option('Selecciona un pasaje de la búsqueda', '');
   placeholder.disabled = true;
   const options = rows.map((item, index) => {
     const subsection = String(item.subsectionTitle ?? '').trim();
     const reference = subsection ? ` · ${subsection.slice(0, 90)}` : '';
-    return new Option(`${index + 1}. Pág. ${item.originalPage} del libro · ${item.localPage} del PDF${reference}`, item.id);
+    const isBest = item.id === best?.id;
+    return new Option(`${isBest ? '★ ' : ''}${index + 1}. Pág. ${item.originalPage} del libro · ${item.localPage} del PDF${isBest ? ' · mejor en este PDF' : ''}${reference}`, item.id);
   });
   e.readerOccurrence.replaceChildren(placeholder, ...options);
   e.readerOccurrence.disabled = false;
@@ -477,7 +486,8 @@ function syncReaderOccurrence() {
   }
   currentResult = selected;
   resultIndex = results.indexOf(selected);
-  e.readerEvidence.textContent = `Coincidencias: ${selected.matchedTerms.join(', ') || 'consulta literal'}. Destino a nivel de página${selected.source === 'ocr' ? ' · OCR pendiente de revisión' : ''}.`;
+  const isBest = selected.id === bestResultInDocument(pdfDocumentId)?.id;
+  e.readerEvidence.textContent = `${isBest ? '★ Mejor coincidencia en este PDF. ' : ''}Coincidencias: ${selected.matchedTerms.join(', ') || 'consulta literal'}. Destino a nivel de página${selected.source === 'ocr' ? ' · OCR pendiente de revisión' : ''}.`;
   e.readerResultPrev.disabled = resultIndex <= 0;
   e.readerResultNext.disabled = resultIndex >= results.length - 1;
 }
@@ -496,6 +506,9 @@ async function openResult(id, addHistory = false) {
   ui.showView('reader');
   if (addHistory) history.pushState({ reader: true }, '', '#lectura');
   e.readerTitle.textContent = result.title;
+  e.readerView.dataset.sectionTheme = sectionTheme(result.sectionId).id;
+  e.readerSection.innerHTML = renderSectionBadge(result.sectionId);
+  e.readerSection.hidden = false;
   e.readerLocation.textContent = `${result.sectionTitle} · página ${result.originalPage} del libro`;
   e.readerEvidence.textContent = `Coincidencias: ${result.matchedTerms.join(', ') || 'consulta literal'}. Destino a nivel de página${result.source === 'ocr' ? ' · OCR pendiente de revisión' : ''}.`;
   e.readerResultPrev.disabled = resultIndex <= 0;
@@ -646,6 +659,9 @@ async function lock(message = '') {
   e.readerTitle.textContent = '';
   e.readerLocation.textContent = '';
   e.readerEvidence.textContent = '';
+  e.readerSection.replaceChildren();
+  e.readerSection.hidden = true;
+  delete e.readerView.dataset.sectionTheme;
   e.readerStatus.textContent = '';
   e.query.value = '';
   e.results.replaceChildren();

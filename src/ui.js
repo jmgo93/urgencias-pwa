@@ -1,3 +1,5 @@
+import { sectionTheme } from './section-themes.js';
+
 const paths = {
   search: '<circle cx="10" cy="10" r="7"/><path d="m21 21-6-6"/>',
   book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 3H20v19H6.5A2.5 2.5 0 0 1 4 19.5v-14A2.5 2.5 0 0 1 6.5 3Z"/><path d="M8 7h8M8 11h6"/>',
@@ -12,6 +14,7 @@ const paths = {
   check: '<path d="m5 12 4 4L19 6"/>',
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/>',
   spark: '<path d="m12 3 2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4L12 3Z"/>',
+  star: '<path d="m12 3 2.8 5.7 6.3.9-4.5 4.4 1.1 6.3-5.7-3-5.7 3 1.1-6.3L3.2 9.6l6.3-.9L12 3Z"/>',
   zoomIn: '<circle cx="10" cy="10" r="7"/><path d="m21 21-6-6M7 10h6M10 7v6"/>',
   zoomOut: '<circle cx="10" cy="10" r="7"/><path d="m21 21-6-6M7 10h6"/>',
   external: '<path d="M9 5H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4M15 3h6v6m0-6L10 14"/>',
@@ -26,6 +29,15 @@ export function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 }
 
+export function renderSectionBadge(sectionId, { className = '' } = {}) {
+  const theme = sectionTheme(sectionId);
+  return `<span class="section-badge ${escapeHtml(className)}" data-section-theme="${escapeHtml(theme.id)}"><svg class="icon section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${theme.icon}</svg><span>${escapeHtml(theme.label)}</span></span>`;
+}
+
+function bestMatchBadge(scope, label) {
+  return `<span class="best-match-badge" data-best-match="${scope}">${icon('star')}<span>${label}</span></span>`;
+}
+
 function firstValue(...values) { return values.find((value) => value !== undefined && value !== null && value !== ''); }
 
 function resultModel(result, index, sections) {
@@ -36,6 +48,7 @@ function resultModel(result, index, sections) {
     const section = Array.isArray(sections) ? sections.find((entry) => String(entry.id) === String(result.sectionId ?? fragment.sectionId)) : sections?.[result.sectionId ?? fragment.sectionId];
     const title = firstValue(result.title, result.chapterTitle, fragment.title, fragment.chapterTitle, 'Página del libro');
     const sectionTitle = firstValue(result.sectionTitle, fragment.sectionTitle, section?.title, section?.titulo, 'Biblioteca de urgencias');
+    const theme = sectionTheme(firstValue(result.sectionId, fragment.sectionId, section?.id));
     const snippet = String(firstValue(result.snippet, result.excerpt, fragment.snippet, fragment.text, '')).replace(/\s+/g, ' ').trim();
     const terms = result.matchedTerms || result.matches || fragment.matchedTerms || [];
     const matchedTerms = [...new Set(terms.map((term) => typeof term === 'string' ? term : term.term || term.text || term.label).filter(Boolean))];
@@ -52,7 +65,7 @@ function resultModel(result, index, sections) {
     const fileMeta = [Number.isFinite(bytes) && bytes > 0 ? `${(bytes / 1048576).toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} MiB` : '', Number.isFinite(pageCount) && pageCount > 0 ? `${pageCount} ${pageCount === 1 ? 'página' : 'páginas'}` : ''].filter(Boolean).join(' · ');
     const documentId = firstValue(result.documentId, fragment.documentId, span.documentId);
     return { id, documentId, documentKey: documentId === undefined ? `result:${index}` : `document:${documentId}`,
-      page, localPage, title, sectionTitle, snippet, matchedTerms, missingTerms, subsectionTitle,
+      page, localPage, title, sectionTitle, theme, snippet, matchedTerms, missingTerms, subsectionTitle,
       showSubsection, isOcr, sourceLabel, meta, fileMeta, score: Number(result.score) || 0,
       occurrenceStart: Number(result.occurrenceStart) || 0, index };
 }
@@ -72,9 +85,9 @@ function groupResults(results, sections) {
   return [...documents.values()].sort((a, b) => b.best.score - a.best.score || a.best.index - b.best.index);
 }
 
-function renderOccurrence(row, index) {
+function renderOccurrence(row, index, isBest = false) {
   return `<article class="result-occurrence" data-occurrence-id="${escapeHtml(row.id)}">
-    <div class="occurrence-heading"><strong>Coincidencia ${index + 1}</strong>${row.isOcr ? '<span class="badge badge-warning">OCR pendiente de revisión</span>' : ''}</div>
+    <div class="occurrence-heading"><strong>Coincidencia ${index + 1}</strong>${isBest ? bestMatchBadge('occurrence', 'Mejor en este PDF') : ''}${row.isOcr ? '<span class="badge badge-warning">OCR pendiente de revisión</span>' : ''}</div>
     ${row.showSubsection ? `<p class="subsection-reference">Referencia de texto: ${escapeHtml(row.subsectionTitle)}</p>` : ''}
     <p class="result-snippet">${escapeHtml(row.snippet.length > 320 ? `${row.snippet.slice(0, 317)}…` : row.snippet)}</p>
     ${row.matchedTerms.length ? `<div class="match-list" aria-label="Términos encontrados">${row.matchedTerms.map((term) => `<span class="match-chip">${icon('check')}${escapeHtml(term)}</span>`).join('')}</div>` : ''}
@@ -84,7 +97,7 @@ function renderOccurrence(row, index) {
 }
 
 export function renderResults(results = [], sections = [], { compact = false } = {}) {
-  return groupResults(results, sections).map((group) => {
+  return groupResults(results, sections).map((group, documentIndex) => {
     const best = group.best;
     const pages = [...group.pages.values()].sort((a, b) => Number(a.localPage ?? a.page ?? Infinity) - Number(b.localPage ?? b.page ?? Infinity));
     const countLabel = `${pages.length} ${pages.length === 1 ? 'página' : 'páginas'} con ${group.count} ${group.count === 1 ? 'coincidencia' : 'coincidencias'}`;
@@ -93,12 +106,12 @@ export function renderResults(results = [], sections = [], { compact = false } =
       const isBest = rows.some((row) => row.id === best.id);
       const label = [page.page ? `Pág. ${page.page} del libro` : 'Página del libro', page.localPage ? `pág. ${page.localPage} del PDF` : ''].filter(Boolean).join(' · ');
       return `<details class="result-page" data-local-page="${escapeHtml(page.localPage ?? '')}"${isBest ? ' open' : ''}>
-        <summary class="result-page-summary"><span><strong>${escapeHtml(label)}</strong><span class="page-match-count">${rows.length} ${rows.length === 1 ? 'coincidencia' : 'coincidencias'}${isBest ? ' · mejor coincidencia' : ''}</span></span>${icon('chevronRight', 'result-chevron')}</summary>
-        <div class="result-page-occurrences">${rows.map(renderOccurrence).join('')}</div>
+        <summary class="result-page-summary"><span><strong>${escapeHtml(label)}</strong><span class="page-match-count"><span>${rows.length} ${rows.length === 1 ? 'coincidencia' : 'coincidencias'}</span>${isBest ? bestMatchBadge('page', 'Mejor en este PDF') : ''}</span></span>${icon('chevronRight', 'result-chevron')}</summary>
+        <div class="result-page-occurrences">${rows.map((row, index) => renderOccurrence(row, index, row.id === best.id)).join('')}</div>
       </details>`;
     }).join('');
-    return `<details class="result-card result-document-card${compact ? ' result-card-compact' : ''}" data-document-id="${escapeHtml(best.documentId ?? '')}" data-result-id="${escapeHtml(best.id)}"${compact ? '' : ' open'}>
-      <summary class="result-summary"><h2><span>${escapeHtml(best.title)}</span>${icon('chevronRight', 'result-chevron')}</h2><span class="document-match-count">${escapeHtml(countLabel)}</span></summary>
+    return `<details class="result-card result-document-card${compact ? ' result-card-compact' : ''}" data-document-id="${escapeHtml(best.documentId ?? '')}" data-result-id="${escapeHtml(best.id)}" data-section-theme="${escapeHtml(best.theme.id)}"${compact ? '' : ' open'}>
+      <summary class="result-summary"><span class="document-summary-meta">${renderSectionBadge(best.theme.id)}${documentIndex === 0 ? bestMatchBadge('global', 'Mejor coincidencia') : ''}</span><h2><span>${escapeHtml(best.title)}</span>${icon('chevronRight', 'result-chevron')}</h2><span class="document-match-count">${escapeHtml(countLabel)}</span></summary>
       <div class="result-details"><div class="result-eyebrow">${icon('layers')}<span>${escapeHtml(best.sectionTitle)}</span></div>
         <div class="document-file-meta">${best.fileMeta ? `<span class="file-meta">${escapeHtml(best.fileMeta)}</span>` : ''}<span class="source-edition">Libro · 2018</span></div>
         <p class="document-results-help">Elige una página para ver sus coincidencias y abrir el PDF.</p>
@@ -159,7 +172,7 @@ export function mountUI(root) {
       </section>
       <section id="reader-view" class="reader-view" hidden aria-labelledby="reader-title">
         <div class="reader-heading"><button id="reader-back" class="button button-text" type="button">${icon('back')}Volver a resultados</button><div class="suggestion-nav"><button id="reader-result-prev" class="icon-button" type="button" aria-label="Coincidencia anterior" title="Coincidencia anterior">${icon('chevronLeft')}</button><span>Otras coincidencias</span><button id="reader-result-next" class="icon-button" type="button" aria-label="Coincidencia siguiente" title="Coincidencia siguiente">${icon('chevronRight')}</button></div></div>
-        <div class="reader-title-row"><div><h1 id="reader-title">Documento</h1><p id="reader-location"></p></div><span class="badge">Fuente original · 2018</span></div>
+        <div class="reader-title-row"><div><h1 id="reader-title">Documento</h1><span id="reader-section" class="reader-section" hidden></span><p id="reader-location"></p></div><span class="badge">Fuente original · 2018</span></div>
         <p id="reader-evidence" class="reader-evidence"></p>
         <div id="reader-occurrences" class="reader-occurrences" hidden><label for="reader-occurrence">Coincidencias en este PDF</label><select id="reader-occurrence"></select></div>
         <div class="reader-toolbar"><div class="reader-paging"><button id="page-prev" class="icon-button" type="button" aria-label="Página anterior" title="Página anterior">${icon('chevronLeft')}</button><label for="page-number">Página</label><input id="page-number" type="number" min="1" value="1" inputmode="numeric" /><span>de <span id="page-total">1</span></span><button id="page-next" class="icon-button" type="button" aria-label="Página siguiente" title="Página siguiente">${icon('chevronRight')}</button></div><div class="reader-tools"><button id="zoom-out" class="icon-button" type="button" aria-label="Reducir tamaño" title="Reducir tamaño">${icon('zoomOut')}</button><button id="zoom-in" class="icon-button" type="button" aria-label="Ampliar tamaño" title="Ampliar tamaño">${icon('zoomIn')}</button><span class="toolbar-divider"></span><button id="reader-text-toggle" class="button button-text button-compact" type="button" aria-expanded="false" aria-controls="reader-text">${icon('text')}<span>Ver texto</span></button><button id="reader-ai-share" class="button button-tonal button-compact" type="button" aria-haspopup="dialog" disabled>${icon('spark')}<span>Consultar con IA</span></button><button id="reader-native-open" class="icon-button" type="button" aria-label="Abrir PDF en otra pestaña" title="Abrir PDF en otra pestaña">${icon('external')}</button></div></div>

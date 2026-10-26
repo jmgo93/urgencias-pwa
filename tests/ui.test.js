@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { renderResults } from '../src/ui.js';
+import { renderResults, renderSectionBadge } from '../src/ui.js';
 test('source text and query labels cannot introduce executable HTML in results', () => {
   const html = renderResults([{ id: 'x" onclick="alert(1)', title: '<img src=x onerror=alert(1)>',
     excerpt: '<script>alert(1)</script>', matchedTerms: ['<iframe>'], missingTerms: ['<object>'],
@@ -118,4 +118,63 @@ test('group metadata is escaped and a missing PDF identity never merges unrelate
   assert.ok(!html.includes('<img'));
   assert.ok(!html.includes(' onclick="bad()'));
   assert.ok(!html.includes('undefined'));
+});
+
+test('stars identify the best exact passage and its page without treating every PDF as the global best', () => {
+  const base = { sectionId: 's03', sectionTitle: 'Urgencias cardiovasculares', title: 'Documento', matchedTerms: ['disnea'] };
+  const rows = [
+    { ...base, id: 'early', documentId: 'a', localPage: 1, originalPage: 100, occurrenceStart: 0, score: 10 },
+    { ...base, id: 'later-first', documentId: 'a', localPage: 2, originalPage: 101, occurrenceStart: 0, score: 20 },
+    { ...base, id: 'later-best', documentId: 'a', localPage: 2, originalPage: 101, occurrenceStart: 100, score: 40 },
+    { ...base, id: 'other', documentId: 'b', localPage: 1, originalPage: 200, score: 30 },
+  ];
+  for (const compact of [false, true]) {
+    const html = renderResults(rows, [], { compact });
+    const occurrences = new Map([...html.matchAll(/<article class="result-occurrence" data-occurrence-id="([^"]+)">([\s\S]*?)<\/article>/g)].map(match => [match[1], match[2]]));
+    assert.equal((html.match(/data-best-match="global"/g) ?? []).length, 1);
+    assert.equal((html.match(/data-best-match="page"/g) ?? []).length, 2);
+    assert.equal((html.match(/data-best-match="occurrence"/g) ?? []).length, 2);
+    assert.ok(occurrences.get('later-best').includes('data-best-match="occurrence"'));
+    assert.ok(!occurrences.get('early').includes('data-best-match'));
+    assert.ok(!occurrences.get('later-first').includes('data-best-match'));
+    const firstSummary = html.match(/<summary class="result-summary">([\s\S]*?)<\/summary>/)[1];
+    assert.ok(firstSummary.includes('data-best-match="global"'));
+    assert.ok(firstSummary.includes('Mejor coincidencia'));
+    const pages = [...html.matchAll(/<details class="result-page" data-local-page="([^"]+)"[^>]*>([\s\S]*?)<\/details>/g)];
+    assert.ok(!pages[0][2].includes('data-best-match="page"'));
+    assert.ok(pages[1][2].includes('data-best-match="page"'));
+    assert.ok(pages[1][2].includes('Mejor en este PDF'));
+    assert.equal((html.match(/data-open-result=/g) ?? []).length, rows.length);
+  }
+});
+
+test('compact PDF headers keep a named section identity with its icon and safe theme independently of supplied titles', () => {
+  const rows = [
+    { id: 'cardio', documentId: 'a', sectionId: 's03', sectionTitle: 'Texto ajeno al nombre', title: 'Uno', localPage: 1, score: 20 },
+    { id: 'resp', documentId: 'b', sectionId: 's04', title: 'Dos', localPage: 1, score: 10 },
+    { id: 'unknown', documentId: 'c', sectionId: 's03" onclick="bad()', title: 'Tres', localPage: 1, score: 5 },
+  ];
+  const html = renderResults(rows, [], { compact: true });
+  const summaries = [...html.matchAll(/<summary class="result-summary">([\s\S]*?)<\/summary>/g)].map(match => match[1]);
+  assert.ok(summaries[0].includes('data-section-theme="s03"'));
+  assert.ok(summaries[1].includes('data-section-theme="s04"'));
+  assert.ok(summaries[2].includes('data-section-theme="other"'));
+  for (const summary of summaries) {
+    assert.ok(summary.includes('section-icon'));
+    assert.ok(summary.includes('aria-hidden="true"'));
+    assert.ok(!summary.includes('data-open-result'));
+    assert.ok(!summary.includes('result-snippet'));
+  }
+  assert.ok(!html.includes('onclick'));
+  assert.ok(summaries[2].includes('Otras secciones'));
+  assert.notEqual(summaries[0].match(/<svg[\s\S]*?<\/svg>/)[0], summaries[1].match(/<svg[\s\S]*?<\/svg>/)[0]);
+});
+
+test('the shared section badge cannot accept a selector, class attribute or SVG payload from untrusted metadata', () => {
+  const badge = renderSectionBadge('s04][onmouseover=bad()]', { className: 'x" onfocus="bad()' });
+  assert.ok(badge.includes('data-section-theme="other"'));
+  assert.ok(badge.includes('Otras secciones'));
+  assert.ok(badge.includes('x&quot; onfocus=&quot;bad()'));
+  assert.ok(!badge.includes(' onfocus="'));
+  assert.ok(!badge.includes('onmouseover'));
 });
