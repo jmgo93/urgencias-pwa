@@ -85,7 +85,7 @@ const aiShare = setupAiShare({
     aiContext = { session: active, documentId: pdfDocumentId, page: pageNumber, generation: openGeneration };
     return buildAiMaterial({ document: sourceDocument,
       fragments: active.corpus.fragments.filter(item => item.documentId === pdfDocumentId),
-      pdfBytes, pageNumber, query: e.query.value.trim(), ...options });
+      pdfBytes, pageNumber, ...options });
   },
   isContextCurrent() {
     return Boolean(session && pdfBytes && pdfDocument && pdfDocumentId === currentResult?.documentId
