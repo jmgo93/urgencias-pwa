@@ -67,6 +67,15 @@ export function renderResults(results = [], sections = []) {
 }
 
 const exampleQueries = ['Disnea y dolor torácico', 'Gasometría y acidosis', 'Fiebre y rigidez de nuca', 'Síncope y palpitaciones'];
+const historyDate = new Intl.DateTimeFormat('es', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+function renderHistoryEntries(entries) {
+  return entries.map((entry) => {
+    const date = new Date(['number', 'string'].includes(typeof entry.lastUsedAt) ? entry.lastUsedAt : NaN);
+    const dateLabel = Number.isFinite(date.getTime()) ? historyDate.format(date) : '';
+    return `<li><button type="button" class="history-query-button" data-history-query="${escapeHtml(entry.query)}" data-history-section="${escapeHtml(entry.sectionId ?? '')}" data-history-kind="${escapeHtml(entry.kind ?? '')}" aria-label="Buscar de nuevo: ${escapeHtml(entry.query)}">${icon('search')}<span class="history-query-content"><span class="history-query-text">${escapeHtml(entry.query)}</span>${dateLabel ? `<time class="history-query-date" datetime="${escapeHtml(date.toISOString())}">${escapeHtml(dateLabel)}</time>` : ''}</span>${icon('arrow')}</button></li>`;
+  }).join('');
+}
 
 export function mountUI(root) {
   root.innerHTML = `
@@ -97,8 +106,10 @@ export function mountUI(root) {
       <section id="search-view" class="search-view" hidden aria-labelledby="search-title">
         <div class="search-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> BIBLIOTECA DE CONSULTA</div><h1 id="search-title">¿Qué necesitas encontrar?</h1><p>Escribe una frase. Sigue las conexiones. Ve a la fuente.</p></div><div class="library-summary">${icon('book')}<div><strong id="library-title">Medicina de urgencias y emergencias</strong><span>Edición 2018 · consulta documental</span></div></div></div>
         <div class="search-panel"><form id="search-form" class="search-form" role="search"><label class="sr-only" for="query">Síntomas, diagnósticos o conceptos que quieres buscar</label><div class="query-field">${icon('search')}<input id="query" name="query" type="search" autocomplete="off" spellcheck="false" placeholder="Por ejemplo: disnea, dolor torácico y taquicardia" enterkeyhint="search" /><button id="clear-query" class="icon-button clear-query" type="button" aria-label="Borrar búsqueda" title="Borrar búsqueda">${icon('close')}</button><button id="search-button" type="submit" class="button button-primary">Buscar ${icon('arrow')}</button></div><div class="filter-row"><span class="filter-label">Acotar la búsqueda</span><div class="select-wrap"><label for="section-filter">Sección</label><select id="section-filter"><option value="">Todas las secciones</option></select></div><div class="select-wrap"><label for="kind-filter">Contenido</label><select id="kind-filter"><option value="">Todo el contenido</option><option value="chapter">Capítulos</option><option value="case">Casos clínicos</option></select></div><span class="search-hint">Puedes combinar varios conceptos</span></div></form></div>
+        <p id="startup-status" class="startup-status" role="status" aria-live="polite"></p>
         <p id="offline-status" class="offline-status" role="status" aria-live="polite"></p>
         <div id="interpretation" class="interpretation" hidden></div><p id="search-status" class="search-status" role="status" aria-live="polite"></p>
+        <section id="search-history" class="search-history" aria-labelledby="search-history-title" aria-describedby="search-history-note" hidden><div class="history-heading"><h2 id="search-history-title">Últimas búsquedas</h2><button id="clear-history-button" type="button" class="button button-text button-compact">Borrar historial</button></div><p id="search-history-note">Guardado sólo en este dispositivo. Toca una búsqueda para repetirla.</p><ul id="search-history-list" class="search-history-list"></ul></section>
         <div id="empty-state" class="empty-state"><div class="empty-heading"><span class="soft-icon">${icon('spark')}</span><div><h2>Empieza por lo que tienes en mente</h2><p>Una palabra, una pregunta o una combinación de conceptos.</p></div></div><div class="example-grid">${exampleQueries.map((query, index) => `<button type="button" class="example-card" data-query="${escapeHtml(query)}"><span class="example-number">0${index + 1}</span><span>${escapeHtml(query)}</span>${icon('arrow')}</button>`).join('')}</div><div class="how-it-works"><div><span class="step-number">1</span><div><strong>Describe lo que buscas</strong><p>El buscador relaciona términos y sinónimos.</p></div></div><div><span class="step-number">2</span><div><strong>Explora las conexiones</strong><p>Compara los fragmentos y sus coincidencias.</p></div></div><div><span class="step-number">3</span><div><strong>Abre la página exacta</strong><p>Lee el capítulo y vuelve a tus resultados.</p></div></div></div></div>
         <div id="search-summary" class="search-summary" hidden><div><h2 id="result-count">Resultados</h2><p>Ordenados por coincidencia con tu búsqueda</p></div><span class="source-note">${icon('info')}Relevancia documental, no probabilidad diagnóstica</span></div>
         <div id="results" class="results" aria-label="Resultados de la búsqueda"></div>
@@ -124,6 +135,11 @@ export function mountUI(root) {
     elements,
     showView,
     setLocked(locked) { elements['session-actions'].hidden = locked; showView(locked ? 'lock' : 'search'); },
+    renderHistory(entries = []) {
+      const visible = (Array.isArray(entries) ? entries : []).filter((entry) => entry && typeof entry.query === 'string' && entry.query.trim()).slice(0, 20);
+      elements['search-history-list'].innerHTML = renderHistoryEntries(visible);
+      elements['search-history'].hidden = visible.length === 0;
+    },
     renderResults(results, sections) {
       elements.results.innerHTML = renderResults(results, sections);
       elements['empty-state'].hidden = true;
