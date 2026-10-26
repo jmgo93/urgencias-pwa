@@ -4,6 +4,8 @@ Requisito añadido: el [acceso con contraseña](17_Acceso_con_contrasena.md) pro
 
 Estado: plan de implementación; no es una aplicación ya construida. Fecha: 25 de octubre de 2026. Este documento concreta el buscador de la [fase PWA estática](14_Plan_PWA_estatica.md) y su contrato con el [visor y la preparación de PDF](16_PDF_navegacion_y_publicacion.md). En esta fase no se ejecutan PHP, Laravel ni consultas a una base de datos. Las propuestas anteriores de búsqueda sobre MariaDB quedan reservadas para una fase posterior.
 
+Actualización del 26 de octubre de 2026: el buscador local ya está implementado. El apartado 7 recoge su nueva política de cruce obligatorio; el resto conserva propuestas del diseño inicial que no deben interpretarse como funciones ya entregadas. El estado efectivo se documenta en el [README](../../README.md).
+
 ## 1. Resultado que debe ofrecer
 
 El usuario escribe términos sueltos o una frase. El navegador busca en todo el corpus disponible, identifica coincidencias literales y variantes revisadas, cruza los conceptos por pasaje y presenta destinos concretos dentro de capítulos y subsecciones. Cada resultado explica qué parte de la consulta ha encontrado, dónde y mediante qué variante. Abrirlo lleva al PDF pequeño y a la página correspondiente; volver recupera la búsqueda y su posición.
@@ -153,18 +155,20 @@ La edad, la población y el sexo no se deducirán para aplicar filtros obligator
 
 Los valores de laboratorio incluidos en una frase podrán localizar menciones literales; el buscador no los interpretará como normales o patológicos ni calculará su relación con enfermedades.
 
-## 7. Recuperación: ampliar sin falsear el cruce
+## 7. Recuperación: todos los conceptos por defecto
 
-El cruce de información tendrá dos modos visibles:
+La aplicación exige evidencia de **todos los conceptos afirmados** dentro del mismo fragmento, admitiendo también su encabezado indexado. Las palabras funcionales se omiten y las variantes del mismo concepto son alternativas. No se completará una consulta sumando coincidencias de páginas separadas.
 
 | Modo | Comportamiento |
 | --- | --- |
-| Coincidencias relacionadas, por defecto | Recupera pasajes con uno o varios conceptos, prioriza los de mayor cobertura y distingue coincidencias parciales |
-| Todos los conceptos seleccionados | Exige evidencia de cada concepto seleccionado dentro del pasaje o unidad de subsección expresamente elegida |
+| Todos los conceptos, único modo actual | Exige cada concepto afirmado y cada frase entre comillas; añadir otro concepto independiente restringe el conjunto elegible |
+| Sin coincidencia conjunta | Muestra un estado vacío y propone quitar un concepto o cambiar filtros; no activa resultados parciales automáticamente |
 
 Las variantes del mismo concepto se combinan con OR. Los conceptos obligatorios se combinan con AND después de comprobar la evidencia. No se construirá un AND de todas las palabras de una frase narrativa: artículos, verbos genéricos y contexto producirían demasiados falsos negativos. MiniSearch admite combinaciones y opciones de expansión; la aplicación compondrá esas consultas y verificará sus resultados. [Opciones oficiales de búsqueda](https://lucaong.github.io/minisearch/types/MiniSearch.SearchOptions.html).
 
-Se comenzará con búsqueda exacta y variantes revisadas. Si el usuario no obtiene resultados suficientes, se ofrecerá ampliar con corrección ortográfica controlada. Prefijos sólo para el último término en escritura y autocompletado; no se aceptará una subcadena en mitad de una palabra como coincidencia clínica. La corrección aproximada no se aplicará automáticamente a siglas cortas, números, unidades ni términos que el diccionario marque como sensibles a confusión.
+La recuperación de un término ajeno al diccionario se resuelve de manera independiente: coincidencia exacta si existe en el índice, después prefijo si procede, y finalmente corrección de una edición para términos largos sin coincidencia exacta ni por prefijo. Se señalan con «…» los prefijos y con «≈» las erratas. Añadir otro concepto no amplía la recuperación de los anteriores. Una frase entre comillas siempre exige la secuencia literal.
+
+Las negaciones siguen siendo contexto, no filtros de exclusión ni conceptos afirmados obligatorios. El reconocimiento de una expresión compuesta puede sustituir un término genérico por otro concepto con sus propias variantes. La garantía de restricción se refiere a añadir conceptos afirmados independientes conservando los anteriores, con los mismos filtros. Se muestran hasta 30 destinos, con un máximo de tres páginas por documento: una página que antes quedaba fuera de ese límite puede hacerse visible al acotar, aunque haya menos coincidencias totales. Los contadores muestran también el total de fragmentos y documentos encontrados.
 
 Las frases entre comillas exigirán la secuencia de tokens acordada. La aplicación verificará el orden y la adyacencia en la evidencia; no confundirá la mera presencia separada de las palabras con una frase exacta. Si una frase está partida entre páginas, se utilizarán sus tramos contiguos dentro de la misma subsección, manteniendo ambas referencias.
 

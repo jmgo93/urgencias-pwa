@@ -130,7 +130,9 @@ function withinOneEdit(left, right) {
 }
 
 function matchGroup(haystack, group, allowPrefix = false, approximateWords = []) {
-  for (const variant of group.variants) {
+  // Prefer the user's wording when several aliases coexist in the same text.
+  const variants = [group.literal, ...group.variants.filter((variant) => variant !== group.literal)];
+  for (const variant of variants) {
     const position = haystack.indexOf(` ${variant} `);
     if (position !== -1) return { position, variant, literal: variant === group.literal, prefix: false };
   }
@@ -260,33 +262,44 @@ export async function createSearchEngine(corpus, { onProgress, preparedSearch } 
       if (!parsed.groups.length && !parsed.quoted.length) return response();
       const searchWords = [...new Set(parsed.groups.flatMap((group) => group.variants.flatMap(tokens)).concat(parsed.quoted.flatMap(tokens)))];
       if (!searchWords.length) return response();
-      let candidates = index.search(searchWords.join(' '));
-      let allowPrefix = false;
-      let allowApproximate = false;
-      if (!candidates.length && positive.some((group) => !group.isConcept && group.literal.length >= 4)) {
-        candidates = index.search(searchWords.join(' '), { prefix: (term) => term.length >= 4 });
-        allowPrefix = true;
-      }
-      if (!candidates.length && positive.some((group) => !group.isConcept && group.literal.length >= 6) && !parsed.quoted.length) {
-        const unknown = new Set(positive.filter((group) => !group.isConcept).map((group) => group.literal));
-        candidates = index.search(searchWords.join(' '), { fuzzy: (term) => unknown.has(term) && term.length >= 6 ? 1 : false });
-        allowApproximate = true;
+      const candidates = new Map(index.search(searchWords.join(' ')).map((candidate) => [candidate.id, candidate]));
+      const recovery = new Map();
+      for (const group of positive) {
+        if (group.isConcept || group.literal.length < 4 || index.search(group.literal).length) continue;
+        // Resolve fallback independently for each term. Adding another concept must
+        // never broaden the accepted spelling of terms already in the query.
+        let recovered = index.search(group.literal, { prefix: true });
+        let mode = { prefix: true, approximate: false };
+        if (!recovered.length && group.literal.length >= 6 && !parsed.quoted.length) {
+          recovered = index.search(group.literal, { fuzzy: 1 });
+          mode = { prefix: false, approximate: true };
+        }
+        if (!recovered.length) continue;
+        recovery.set(group.id, mode);
+        for (const candidate of recovered) {
+          const existing = candidates.get(candidate.id);
+          candidates.set(candidate.id, existing ? {
+            ...existing, score: Math.max(existing.score, candidate.score),
+            terms: [...new Set([...existing.terms, ...candidate.terms])],
+          } : candidate);
+        }
       }
       const ranked = [];
-      for (const candidate of candidates) {
+      for (const candidate of candidates.values()) {
         const fragment = fragments.get(candidate.id);
         const document = documents.get(fragment.documentId);
         if (sectionId && fragment.sectionId !== sectionId) continue;
         if (kind && document.kind !== kind) continue;
         if (parsed.quoted.some((phrase) => !fragment.bodySearch.includes(` ${phrase} `) && !fragment.headingSearch.includes(` ${phrase} `))) continue;
         const matches = positive.map((group) => {
-          const body = matchGroup(fragment.bodySearch, group, allowPrefix, allowApproximate ? candidate.terms : []);
-          const heading = matchGroup(fragment.headingSearch, group, allowPrefix, allowApproximate ? candidate.terms : []);
+          const mode = recovery.get(group.id);
+          const body = matchGroup(fragment.bodySearch, group, mode?.prefix, mode?.approximate ? candidate.terms : []);
+          const heading = matchGroup(fragment.headingSearch, group, mode?.prefix, mode?.approximate ? candidate.terms : []);
           return { group, body, heading, found: body ?? heading };
         });
         const found = matches.filter((match) => match.found);
         const contextualNegatives = negative.filter((group) => negatedContext(fragment.bodySearch, group));
-        if (positive.length && !found.length) continue;
+        if (found.length !== positive.length) continue;
         if (!positive.length && negative.length && !contextualNegatives.length) continue;
         const positions = found.map((match) => match.body?.position).filter((position) => position !== undefined);
         const proximity = positions.length > 1 ? 100 / (1 + (Math.max(...positions) - Math.min(...positions)) / 100) : 0;
