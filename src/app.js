@@ -153,7 +153,7 @@ async function openLibrary({ password, savedKey, knownManifest, remember = false
       e.startupStatus.textContent = 'Abriendo tu búsqueda…';
       history.replaceState({}, '', base.pathname);
       window.scrollTo(0, 0);
-      e.query.focus({ preventScroll: true });
+      e.query.focus();
     }
     const [bytes, preparedSearch, searchHistory] = await Promise.all([
       readAsset('corpus', active), readPreparedSearch(manifest, key), readSearchHistory(manifest, key),
@@ -170,9 +170,11 @@ async function openLibrary({ password, savedKey, knownManifest, remember = false
     ui.renderHistory(active.history);
     ui.setLocked(false);
     e.startupStatus.textContent = preparedSearch ? 'Abriendo tu buscador guardado…' : 'Primera preparación del buscador. Ya puedes escribir tu búsqueda.';
-    history.replaceState({}, '', base.pathname);
-    window.scrollTo(0, 0);
-    e.query.focus({ preventScroll: true });
+    if (!savedKey) {
+      history.replaceState({}, '', base.pathname);
+      window.scrollTo(0, 0);
+      e.query.focus();
+    }
     const worker = new Worker(new URL('./search-worker.js', import.meta.url), { type: 'module' });
     active.worker = worker;
     worker.addEventListener('message', onSearchMessage);
