@@ -51,6 +51,8 @@ const formatBytes = bytes => `${(bytes / 1000000).toLocaleString('es-ES', { maxi
 let manifest;
 let session;
 let results = [];
+let searchDocumentLimit = 30;
+let pendingExpansion;
 let currentResult;
 let resultIndex = -1;
 let queryRequest = 0;
@@ -291,17 +293,35 @@ async function restoreDeviceAccess() {
 function onSearchMessage({ data }) {
   if (!session || data.requestId !== queryRequest) return;
   ui.setSearchBusy(false);
+  e.moreResults.disabled = false;
   if (data.type === 'error') { e.searchStatus.textContent = data.message; return; }
   if (data.type !== 'results') return;
   clearTimeout(historyDebounce);
   historyDebounce = setTimeout(() => rememberSearch({ automatic: true }), 1200);
   results = data.results;
   ui.renderResults(results, session.corpus.sections, { compact: e.compactResults.checked });
+  let firstNewCard;
+  if (pendingExpansion?.requestId === data.requestId) {
+    for (const card of e.results.querySelectorAll('details.result-document-card')) {
+      const saved = pendingExpansion.documents.find(item => item.id === card.dataset.documentId);
+      if (!saved) { firstNewCard ??= card; continue; }
+      card.open = saved.open;
+      for (const page of card.querySelectorAll('details.result-page')) {
+        const savedPage = saved.pages.find(item => item.page === page.dataset.localPage);
+        if (savedPage) page.open = savedPage.open;
+      }
+    }
+  }
+  pendingExpansion = undefined;
   ui.renderInterpretation(data.interpretation);
-  const total = data.totalDocuments ?? new Set(results.map(item => item.documentId)).size;
-  e.resultCount.textContent = `${results.length} destinos · ${total} ${total === 1 ? 'documento con coincidencias' : 'documentos con coincidencias'}`;
-  e.searchStatus.textContent = `${data.durationMs.toFixed(0)} ms de búsqueda · ${data.total} fragmentos con coincidencias${data.total > results.length ? ' · se muestran los destinos más relevantes' : ''}`;
+  const shownDocuments = new Set(results.map(item => item.documentId)).size;
+  const shownPages = new Set(results.map(item => JSON.stringify([item.documentId, item.localPage]))).size;
+  const total = data.totalDocuments ?? shownDocuments;
+  e.moreResults.hidden = shownDocuments >= total || searchDocumentLimit >= 1000;
+  e.resultCount.textContent = `${shownDocuments}${total > shownDocuments ? ` de ${total}` : ''} PDF · ${shownPages} ${shownPages === 1 ? 'página con coincidencias' : 'páginas con coincidencias'}`;
+  e.searchStatus.textContent = `${data.durationMs.toFixed(0)} ms de búsqueda · ${data.total} pasajes coincidentes${total > shownDocuments ? ` · se muestran los ${shownDocuments} PDF más relevantes con todas sus coincidencias` : ''}`;
   if (data.interpretation.ambiguous?.length) e.searchStatus.textContent += ` · ${data.interpretation.ambiguous.join(' ')}`;
+  firstNewCard?.querySelector('summary')?.focus();
 }
 e.compactResults.addEventListener('change', () => {
   try { localStorage.setItem(resultsViewPreference, e.compactResults.checked ? 'titles' : 'expanded'); } catch {}
@@ -310,9 +330,10 @@ e.compactResults.addEventListener('change', () => {
   ui.renderResults(results, session.corpus.sections, { compact: e.compactResults.checked });
   e.resultCount.textContent = count;
 });
-function search() {
+function search({ more = false } = {}) {
   clearTimeout(debounce);
   clearTimeout(historyDebounce);
+  if (!more) { searchDocumentLimit = 30; pendingExpansion = undefined; }
   if (!session?.worker) return;
   const query = e.query.value.trim();
   ++queryRequest;
@@ -324,17 +345,29 @@ function search() {
     e.searchSummary.hidden = true;
     e.interpretation.hidden = true;
     e.searchStatus.textContent = '';
+    e.moreResults.hidden = true;
     return;
   }
+  if (more) pendingExpansion = { requestId: queryRequest,
+    documents: [...e.results.querySelectorAll('details.result-document-card')].map(card => ({
+      id: card.dataset.documentId, open: card.open,
+      pages: [...card.querySelectorAll('details.result-page')].map(page => ({ page: page.dataset.localPage, open: page.open })),
+    })),
+  };
   ui.setSearchBusy(true);
+  e.moreResults.disabled = true;
   if (!session.ready) {
     e.searchStatus.textContent = 'Tu consulta está preparada. Los resultados aparecerán al terminar esta primera preparación.';
     return;
   }
   e.searchStatus.textContent = 'Relacionando conceptos en el libro completo…';
   session.worker.postMessage({ type: 'search', requestId: queryRequest, query,
-    filters: { sectionId: e.sectionFilter.value, kind: e.kindFilter.value, limit: 30 } });
+    filters: { sectionId: e.sectionFilter.value, kind: e.kindFilter.value, limit: searchDocumentLimit } });
 }
+e.moreResults.addEventListener('click', () => {
+  searchDocumentLimit = Math.min(1000, searchDocumentLimit + 30);
+  search({ more: true });
+});
 function rememberSearch({ automatic = false } = {}) {
   clearTimeout(historyDebounce);
   const active = session;
@@ -352,7 +385,7 @@ function rememberSearch({ automatic = false } = {}) {
   }).catch(() => { if (session === active) e.startupStatus.textContent = 'La búsqueda funciona, pero no se pudo guardar el historial en este dispositivo.'; });
 }
 e.searchForm.addEventListener('submit', event => { event.preventDefault(); rememberSearch(); search(); });
-e.query.addEventListener('input', () => { if (session) session.historyCleared = false; ++queryRequest; clearTimeout(debounce); clearTimeout(historyDebounce); debounce = setTimeout(search, 180); });
+e.query.addEventListener('input', () => { if (session) session.historyCleared = false; e.moreResults.hidden = true; ++queryRequest; clearTimeout(debounce); clearTimeout(historyDebounce); debounce = setTimeout(search, 180); });
 for (const filter of [e.sectionFilter, e.kindFilter]) filter.addEventListener('change', () => { if (session) session.historyCleared = false; search(); });
 e.clearQuery.addEventListener('click', () => { clearTimeout(historyDebounce); e.query.value = ''; search(); e.query.focus(); });
 document.addEventListener('click', event => {
@@ -399,6 +432,8 @@ async function getPDFLibrary() {
 async function closePDF() {
   closeAiShare();
   e.readerAiShare.disabled = true;
+  e.readerOccurrences.hidden = true;
+  e.readerOccurrence.replaceChildren();
   ++renderGeneration;
   renderTask?.cancel();
   renderTask = undefined;
@@ -419,6 +454,33 @@ async function closePDF() {
   e.readerTextToggle.querySelector('span').textContent = 'Ver texto';
   try { await disposePDFTask(previousTask); } catch { console.warn('El lector no pudo completar su cierre.'); }
 }
+function populateReaderOccurrences() {
+  const rows = results.filter(item => item.documentId === pdfDocumentId);
+  const placeholder = new Option('Selecciona un pasaje de la búsqueda', '');
+  placeholder.disabled = true;
+  const options = rows.map((item, index) => {
+    const subsection = String(item.subsectionTitle ?? '').trim();
+    const reference = subsection ? ` · ${subsection.slice(0, 90)}` : '';
+    return new Option(`${index + 1}. Pág. ${item.originalPage} del libro · ${item.localPage} del PDF${reference}`, item.id);
+  });
+  e.readerOccurrence.replaceChildren(placeholder, ...options);
+  e.readerOccurrence.disabled = false;
+  e.readerOccurrences.hidden = !rows.length;
+}
+function syncReaderOccurrence() {
+  const rows = results.filter(item => item.documentId === pdfDocumentId && item.localPage === pageNumber);
+  const selected = rows.find(item => item.id === currentResult?.id) ?? rows[0];
+  e.readerOccurrence.value = selected?.id ?? '';
+  if (!selected) {
+    e.readerEvidence.textContent = 'No hay pasajes de esta búsqueda en esta página.';
+    return;
+  }
+  currentResult = selected;
+  resultIndex = results.indexOf(selected);
+  e.readerEvidence.textContent = `Coincidencias: ${selected.matchedTerms.join(', ') || 'consulta literal'}. Destino a nivel de página${selected.source === 'ocr' ? ' · OCR pendiente de revisión' : ''}.`;
+  e.readerResultPrev.disabled = resultIndex <= 0;
+  e.readerResultNext.disabled = resultIndex >= results.length - 1;
+}
 async function openResult(id, addHistory = false) {
   if (!session) return;
   const active = session;
@@ -426,6 +488,8 @@ async function openResult(id, addHistory = false) {
   if (!result) return;
   closeAiShare();
   e.readerAiShare.disabled = true;
+  e.readerOccurrences.hidden = true;
+  e.readerOccurrence.disabled = true;
   const generation = ++openGeneration;
   currentResult = result;
   resultIndex = results.indexOf(result);
@@ -470,6 +534,7 @@ async function openResult(id, addHistory = false) {
     e.pageNumber.max = pdfDocument.numPages;
     e.readerNativeOpen.disabled = false;
     e.readerAiShare.disabled = false;
+    populateReaderOccurrences();
     await renderPage();
   } catch (error) {
     console.warn('No se pudo abrir el lector PDF:', error.message);
@@ -513,6 +578,7 @@ async function renderPage() {
     e.pageNext.disabled = pageNumber >= doc.numPages;
     e.readerCanvas.setAttribute('aria-label', `${sourceDocument.title}, página ${originalPage} del libro, ${pageNumber} de este PDF`);
     e.readerStatus.textContent = `Página ${originalPage} del libro · ${pageNumber}/${doc.numPages} del PDF · preparada en ${(performance.now() - started).toFixed(0)} ms${fragments.some(item => item.source === 'ocr') ? ' · OCR pendiente de revisión' : ''}`;
+    syncReaderOccurrence();
     page.cleanup();
   } catch (error) {
     if (error.name !== 'RenderingCancelledException' && generation === renderGeneration && session === active) e.readerStatus.textContent = 'No se pudo dibujar esta página. Puedes abrir el PDF con el botón de la barra.';
@@ -525,11 +591,10 @@ function returnToSearch() {
   ++openGeneration;
   renderTask?.cancel();
   ui.showView('search');
-  window.scrollTo(0, searchScroll);
   const button = [...e.results.querySelectorAll('[data-open-result]')].find(item => item.dataset.openResult === currentResult?.id);
-  const disclosure = button?.closest('details.result-card');
-  if (disclosure) disclosure.open = true;
-  button?.focus({ preventScroll: true });
+  for (let disclosure = button?.closest('details'); disclosure; disclosure = disclosure.parentElement?.closest('details')) disclosure.open = true;
+  window.scrollTo(0, searchScroll);
+  button?.focus();
 }
 e.readerBack.addEventListener('click', () => {
   if (history.state?.reader) history.back(); else returnToSearch();
@@ -537,6 +602,10 @@ e.readerBack.addEventListener('click', () => {
 window.addEventListener('popstate', () => { if (session) returnToSearch(); });
 e.readerResultPrev.addEventListener('click', () => { if (resultIndex > 0) openResult(results[resultIndex - 1].id); });
 e.readerResultNext.addEventListener('click', () => { if (resultIndex < results.length - 1) openResult(results[resultIndex + 1].id); });
+e.readerOccurrence.addEventListener('change', () => {
+  const selected = results.find(item => item.id === e.readerOccurrence.value && item.documentId === pdfDocumentId);
+  if (selected) openResult(selected.id);
+});
 e.pagePrev.addEventListener('click', () => { if (pageNumber > 1) { closeAiShare(); --pageNumber; renderPage(); } });
 e.pageNext.addEventListener('click', () => { if (pdfDocument && pageNumber < pdfDocument.numPages) { closeAiShare(); ++pageNumber; renderPage(); } });
 e.pageNumber.addEventListener('change', () => {
@@ -568,6 +637,8 @@ async function lock(message = '') {
   session?.worker?.terminate();
   session = undefined;
   results = [];
+  searchDocumentLimit = 30;
+  pendingExpansion = undefined;
   currentResult = undefined;
   manifest = undefined;
   await closePDF();
@@ -590,6 +661,7 @@ async function lock(message = '') {
   e.interpretation.replaceChildren();
   e.interpretation.hidden = true;
   e.searchSummary.hidden = true;
+  e.moreResults.hidden = true;
   e.emptyState.hidden = false;
   ui.setSearchBusy(false);
   ui.setLocked(true);

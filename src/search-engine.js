@@ -255,8 +255,8 @@ export async function createSearchEngine(corpus, { onProgress, preparedSearch } 
       const parsed = parseQuery(query);
       const positive = parsed.groups.filter((group) => !group.negated);
       const negative = parsed.groups.filter((group) => group.negated);
-      const response = (results = [], total = 0, totalDocuments = 0) => ({
-        query: parsed.value, total, totalDocuments, results,
+      const response = (results = [], total = 0, totalDocuments = 0, totalPages = 0) => ({
+        query: parsed.value, total, totalDocuments, totalPages, results,
         interpretation: parsed.interpretation, durationMs: Math.round((now() - started) * 100) / 100,
       });
       if (!parsed.groups.length && !parsed.quoted.length) return response();
@@ -312,39 +312,44 @@ export async function createSearchEngine(corpus, { onProgress, preparedSearch } 
       }
       ranked.sort((a, b) => b.score - a.score || a.document.originalStart - b.document.originalStart
         || a.fragment.originalPage - b.fragment.originalPage || a.fragment.id.localeCompare(b.fragment.id));
+      // The limit applies to documents, not occurrences. Keep every matching
+      // passage of each chosen PDF so the UI can group pages without hiding hits.
       const perDocument = new Map();
-      ranked.forEach(({ document }) => perDocument.set(document.id, (perDocument.get(document.id) ?? 0) + 1));
-      const chosen = [];
-      const emitted = new Map();
-      const destinations = new Set();
-      const boundedLimit = Math.max(1, Math.min(100, Number(limit) || 30));
+      const pages = new Set();
       for (const row of ranked) {
-        const destination = `${row.document.id}:${row.fragment.localPage}`;
-        if (destinations.has(destination)) continue;
-        const count = emitted.get(row.document.id) ?? 0;
-        if (count >= 3) continue;
-        destinations.add(destination);
-        emitted.set(row.document.id, count + 1);
-        const { fragment, document } = row;
-        chosen.push({
-          id: fragment.id, documentId: document.id, title: document.title,
-          sectionId: fragment.sectionId, sectionTitle: sections.get(fragment.sectionId)?.title ?? '',
-          kind: document.kind, originalPage: fragment.originalPage, localPage: fragment.localPage,
-          source: fragment.source, anchorPrecision: fragment.anchorPrecision ?? 'page_only',
-          excerpt: makeExcerpt(fragment.text, row.found.map((match) => match.body).filter(Boolean)),
-          matchedTerms: row.found.map((match) => match.found.approximate ? `${match.group.label} ≈ ${match.found.variant}`
-            : match.found.prefix ? `${match.group.label}…` : match.group.label)
-            .concat(row.contextualNegatives.map((group) => `Sin ${group.label.toLocaleLowerCase('es')}`)),
-          missingTerms: row.missing.map((match) => match.group.label),
-          score: Math.round(row.score * 100) / 100,
-          relatedCount: perDocument.get(document.id) - 1,
-          subsectionTitle: fragment.subsectionTitle,
-          subsectionVerification: fragment.subsectionVerification ?? 'unverified',
-          bytes: document.bytes, pageCount: document.pageCount,
-        });
-        if (chosen.length >= boundedLimit) break;
+        if (!perDocument.has(row.document.id)) perDocument.set(row.document.id, { score: row.score, rows: [] });
+        perDocument.get(row.document.id).rows.push(row);
+        pages.add(`${row.document.id}:${row.fragment.localPage}`);
       }
-      return response(chosen, ranked.length, perDocument.size);
+      const chosen = [];
+      const boundedLimit = Math.max(1, Math.min(1000, Math.trunc(Number(limit)) || 30));
+      for (const group of [...perDocument.values()].slice(0, boundedLimit)) {
+        group.rows.sort((a, b) => a.fragment.localPage - b.fragment.localPage
+          || (a.fragment.pageTextStart ?? 0) - (b.fragment.pageTextStart ?? 0)
+          || a.fragment.id.localeCompare(b.fragment.id));
+        for (const row of group.rows) {
+          const { fragment, document } = row;
+          chosen.push({
+            id: fragment.id, documentId: document.id, title: document.title,
+            sectionId: fragment.sectionId, sectionTitle: sections.get(fragment.sectionId)?.title ?? '',
+            kind: document.kind, originalPage: fragment.originalPage, localPage: fragment.localPage,
+            source: fragment.source, anchorPrecision: fragment.anchorPrecision ?? 'page_only',
+            excerpt: makeExcerpt(fragment.text, row.found.map((match) => match.body).filter(Boolean)),
+            matchedTerms: row.found.map((match) => match.found.approximate ? `${match.group.label} ≈ ${match.found.variant}`
+              : match.found.prefix ? `${match.group.label}…` : match.group.label)
+              .concat(row.contextualNegatives.map((group) => `Sin ${group.label.toLocaleLowerCase('es')}`)),
+            missingTerms: row.missing.map((match) => match.group.label),
+            score: Math.round(row.score * 100) / 100,
+            documentScore: Math.round(group.score * 100) / 100,
+            occurrenceStart: Number.isFinite(fragment.pageTextStart) ? fragment.pageTextStart : null,
+            relatedCount: group.rows.length - 1,
+            subsectionTitle: fragment.subsectionTitle,
+            subsectionVerification: fragment.subsectionVerification ?? 'unverified',
+            bytes: document.bytes, pageCount: document.pageCount,
+          });
+        }
+      }
+      return response(chosen, ranked.length, perDocument.size, pages.size);
     },
   };
 }

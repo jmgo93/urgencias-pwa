@@ -34,7 +34,10 @@ for (let round = 0; round < 50; round += 1) {
     row.samples.push(result.durationMs);
     row.totalFragments = result.total;
     row.totalDocuments = result.totalDocuments;
+    row.totalPages = result.totalPages;
     row.returnedResults = result.results.length;
+    row.returnedDocuments = new Set(result.results.map((item) => item.documentId)).size;
+    row.returnedPages = new Set(result.results.map((item) => `${item.documentId}:${item.localPage}`)).size;
     row.topOriginalPages = result.results.slice(0, 3).map((item) => item.originalPage);
     for (const item of result.results) {
       const document = documents.get(item.documentId);
@@ -56,6 +59,30 @@ for (let index = 1; index < narrowing.length; index += 1) {
   assert.ok(narrowing[index].result.totalDocuments <= narrowing[index - 1].result.totalDocuments);
 }
 assert.ok(records.every((record) => engine.search(record.query).results.every((result) => !result.missingTerms.length)));
+for (const record of records) {
+  const result = engine.search(record.query);
+  const groups = new Map();
+  for (const occurrence of result.results) {
+    if (!groups.has(occurrence.documentId)) groups.set(occurrence.documentId, []);
+    groups.get(occurrence.documentId).push(occurrence);
+  }
+  assert.ok(groups.size <= 30);
+  const flattened = [...groups.values()].flat();
+  assert.deepEqual(flattened.map((row) => row.id), result.results.map((row) => row.id));
+  let previousScore = Infinity;
+  for (const occurrences of groups.values()) {
+    const score = Math.max(...occurrences.map((row) => row.score));
+    assert.ok(score <= previousScore);
+    previousScore = score;
+    assert.ok(occurrences.every((row) => row.documentScore === score && row.relatedCount === occurrences.length - 1));
+    for (let index = 1; index < occurrences.length; index += 1) {
+      assert.ok(occurrences[index].localPage >= occurrences[index - 1].localPage);
+      if (occurrences[index].localPage === occurrences[index - 1].localPage) {
+        assert.ok((occurrences[index].occurrenceStart ?? 0) >= (occurrences[index - 1].occurrenceStart ?? 0));
+      }
+    }
+  }
+}
 const percentile = (values, percentileValue) => [...values].sort((a, b) => a - b)[Math.ceil(values.length * percentileValue) - 1];
 const round = (value) => Math.round(value * 100) / 100;
 const report = {
@@ -71,7 +98,7 @@ const report = {
     maxMs: Math.max(...records.flatMap((record) => record.samples)),
   },
   queries: records.map(({ samples, ...record }) => ({ ...record, p50Ms: percentile(samples, 0.5), p95Ms: percentile(samples, 0.95), maxMs: Math.max(...samples) })),
-  checks: ['Referencias originales y locales coherentes en todos los resultados medidos.', 'Todos los grupos positivos requeridos; ninguna coincidencia parcial.', 'Reducción progresiva de fragmentos y documentos al añadir grupos.', 'Negación como contexto.', 'Errata de una edición señalada explícitamente.', 'Término inexistente sin coincidencias.'],
+  checks: ['Referencias originales y locales coherentes en todos los resultados medidos.', 'Todos los grupos positivos requeridos; ninguna coincidencia parcial.', 'Reducción progresiva de fragmentos y documentos al añadir grupos.', 'Límite por PDF y conservación de todas sus ocurrencias en orden de lectura.', 'Documentos ordenados por su mejor coincidencia.', 'Negación como contexto.', 'Errata de una edición señalada explícitamente.', 'Término inexistente sin coincidencias.'],
 };
 await writeFile(resolve(project, 'tests/search-benchmark.json'), `${JSON.stringify(report, null, 2)}\n`);
 const rows = report.queries.map((row) => `| ${row.query.replaceAll('|', '\\|')} | ${row.totalDocuments} | ${row.coldMs} | ${row.p50Ms} | ${row.p95Ms} |`).join('\n');
@@ -81,8 +108,8 @@ await writeFile(resolve(project, 'docs/PRUEBAS_BUSQUEDA.md'), [
   `Medición: ${report.measuredAt}. Motor ejecutado con ${report.runtime}; biblioteca personal de ${engine.documentCount} documentos y ${engine.fragmentCount} fragmentos. No se incorpora texto del libro a este informe.`,
   `La primera construcción del índice tardó **${report.corpus.indexMs} ms**. Después de 10 rondas de calentamiento se midieron 50 rondas de cada consulta (${measuredSearches} búsquedas): mediana **${report.aggregate.p50Ms} ms**, percentil 95 **${report.aggregate.p95Ms} ms** y máximo **${report.aggregate.maxMs} ms**. Son medidas del motor local; no incluyen descifrado, red, pintado de interfaz ni carga del PDF y no garantizan el mismo resultado en otro dispositivo.`,
   `| Consulta | Documentos encontrados | Primera ejecución (ms) | Mediana (ms) | p95 (ms) |\n| --- | ---: | ---: | ---: | ---: |\n${rows}`,
-  `Se verificó la correspondencia de página original y página local en todos los resultados de las ${measuredSearches} consultas. Las pruebas unitarias cubren coincidencia conjunta de grupos positivos, reducción progresiva, equivalencias documentales español/inglés, acentos conservando ñ, palabras cortadas entre líneas, negaciones, frases entre comillas, siglas ambiguas, erratas, términos nuevos, filtros, agrupación, restauración del índice y ciclo de vida del worker.`,
-  `Reducción comprobada al añadir grupos: ${report.narrowing.map((row) => `«${row.query}»: ${row.totalFragments} fragmentos en ${row.totalDocuments} documentos`).join(' → ')}. Los destinos mostrados tienen un límite de 30 y de tres páginas por documento; esos límites pueden cambiar qué destinos aparecen aunque el conjunto completo se reduzca.`,
+  `Se verificó la correspondencia de página original y página local en todos los resultados de las ${measuredSearches} consultas. Las pruebas unitarias cubren coincidencia conjunta de grupos positivos, reducción progresiva, equivalencias documentales español/inglés, acentos conservando ñ, palabras cortadas entre líneas, negaciones, frases entre comillas, siglas ambiguas, erratas, términos nuevos, filtros, agrupación por PDF, todas las páginas y varias ocurrencias en una misma página, restauración del índice y ciclo de vida del worker.`,
+  `Reducción comprobada al añadir grupos: ${report.narrowing.map((row) => `«${row.query}»: ${row.totalFragments} fragmentos en ${row.totalDocuments} documentos`).join(' → ')}. Se seleccionan inicialmente hasta 30 PDF por su mejor coincidencia y se devuelven todas las ocurrencias de cada PDF seleccionado, sin límite de tres páginas ni deduplicación que elimine fragmentos distintos de una página. El parámetro limit cuenta PDF (entre 1 y 1.000, por defecto 30) y permite ampliar la lista hasta cubrir la biblioteca. Dentro del PDF se ordenan por página y posición de lectura. Los contadores globales de documentos, páginas y fragmentos incluyen también los PDF que queden fuera del límite.`,
   'Cada resultado requiere todos los grupos positivos en el mismo fragmento y su contexto de título. Los sinónimos de un grupo son alternativas; no se incorporan coincidencias parciales cuando falta otro grupo. Dentro del conjunto válido, se prioriza evidencia en el cuerpo, coincidencia literal, títulos y proximidad. La clasificación indica relevancia documental.',
   'La recuperación de escritura se resuelve por término en todo el índice y no depende de que la consulta conjunta quede vacía: se usa coincidencia literal si existe; si no, prefijo para palabras de cuatro o más caracteres; si tampoco existe, una edición para palabras de seis o más caracteres. Se señala con «…» o «≈». Las frases entre comillas siempre exigen secuencia literal y desactivan la recuperación de erratas. Las negaciones son contexto y no exclusiones clínicas. Las páginas con OCR mantienen su procedencia y no se presentan como transcripción revisada.',
   'Resultados numéricos reproducibles: [search-benchmark.json](../tests/search-benchmark.json). Ejecutar desde la carpeta de la aplicación: `node scripts/benchmark-search.mjs`; admite `--corpus ruta/al/corpus.json` para una biblioteca local compatible.',

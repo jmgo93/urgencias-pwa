@@ -8,7 +8,7 @@ const corpus = {
   documents: [
     { id: 'chest', title: 'Dolor torácico', kind: 'chapter', sectionId: 'cardio', originalStart: 100, pageCount: 5, bytes: 1000 },
     { id: 'breath', title: 'Disnea', kind: 'chapter', sectionId: 'resp', originalStart: 200, pageCount: 3, bytes: 2000 },
-    { id: 'case', title: 'Caso clínico', kind: 'case', sectionId: 'resp', originalStart: 300, pageCount: 2, bytes: 500 },
+    { id: 'case', title: 'Caso clínico', kind: 'case', sectionId: 'resp', originalStart: 300, pageCount: 4, bytes: 500 },
   ],
   fragments: [
     { id: 'both', documentId: 'chest', sectionId: 'cardio', title: '', text: 'Dolor torácico y disnea. Anamnesis y exploración. Paciente sin fiebre.', originalPage: 101, localPage: 2, source: 'native' },
@@ -130,9 +130,10 @@ test('curated English aliases recover the Spanish source without translating evi
 
 test('negated symptoms are context and never receive positive symptom credit', () => {
   const result = engine.search('dolor torácico sin fiebre');
-  assert.equal(result.results[0].id, 'both');
+  const best = result.results.reduce((previous, row) => row.score > previous.score ? row : previous);
+  assert.equal(best.id, 'both');
   assert.deepEqual(result.interpretation.negated, ['Fiebre']);
-  assert.ok(result.results[0].matchedTerms.includes('Sin fiebre'));
+  assert.ok(best.matchedTerms.includes('Sin fiebre'));
   const feverResult = result.results.find((item) => item.id === 'with-fever');
   assert.ok(feverResult);
   assert.ok(!feverResult.matchedTerms.includes('Fiebre'));
@@ -163,9 +164,10 @@ test('ambiguous acronyms remain literal and visibly ask for precision', () => {
 
 test('filters, grouping and page references are stable', () => {
   const result = engine.search('disnea', { sectionId: 'resp', kind: 'case', limit: 20 });
-  assert.equal(result.results.length, 3);
+  assert.equal(result.results.length, 4);
   assert.equal(result.total, 4);
   assert.equal(result.totalDocuments, 1);
+  assert.equal(result.totalPages, 4);
   assert.ok(result.results.every((item) => item.kind === 'case' && item.sectionId === 'resp'));
   assert.ok(result.results.every((item) => item.relatedCount === 3));
   const mapped = engine.search('hiponatremia').results[0];
@@ -206,15 +208,54 @@ test('PDF line-end hyphenation is repaired for retrieval while source evidence s
   assert.deepEqual(result.results[0].matchedTerms, ['hiponatremia']);
 });
 
-test('overlapping fragments on one PDF page produce a single destination', async () => {
+test('overlapping fragments on one PDF page remain separate occurrences of the same page', async () => {
   const duplicated = await createSearchEngine({
     ...corpus,
     fragments: [corpus.fragments[0], { ...corpus.fragments[0], id: 'overlap' }],
   });
   const result = duplicated.search('disnea');
   assert.equal(result.total, 2);
-  assert.equal(result.results.length, 1);
+  assert.equal(result.totalDocuments, 1);
+  assert.equal(result.totalPages, 1);
+  assert.equal(result.results.length, 2);
+  assert.deepEqual(result.results.map((row) => row.id), ['both', 'overlap']);
+  assert.ok(result.results.every((row) => row.localPage === 2 && row.originalPage === 101));
   assert.equal(result.results[0].relatedCount, 1);
+});
+
+test('the PDF limit preserves every page and occurrence, with PDFs ranked and their passages in reading order', async () => {
+  const grouped = await createSearchEngine({
+    sections: [],
+    documents: [
+      { id: 'long', title: 'Disnea', kind: 'chapter', originalStart: 20, pageCount: 6 },
+      { id: 'short', title: 'Referencia', kind: 'chapter', originalStart: 1, pageCount: 1 },
+    ],
+    fragments: [
+      { id: 'a6', documentId: 'long', localPage: 6, originalPage: 25, pageTextStart: 0, text: 'Disnea.' },
+      { id: 'a1-later', documentId: 'long', localPage: 1, originalPage: 20, pageTextStart: 300, text: 'Segundo apartado.' },
+      { id: 'other', documentId: 'short', localPage: 1, originalPage: 1, pageTextStart: 0, text: 'Disnea.' },
+      { id: 'a3', documentId: 'long', localPage: 3, originalPage: 22, text: 'Seguimiento.' },
+      { id: 'a1-first', documentId: 'long', localPage: 1, originalPage: 20, pageTextStart: 10, text: 'Primer apartado.' },
+      { id: 'a2', documentId: 'long', localPage: 2, originalPage: 21, text: 'Exploraciones.' },
+      { id: 'a5', documentId: 'long', localPage: 5, originalPage: 24, text: 'Revisión.' },
+      { id: 'a4', documentId: 'long', localPage: 4, originalPage: 23, text: 'Evolución.' },
+    ],
+  });
+  const one = grouped.search('disnea', { limit: 1 });
+  assert.equal(one.total, 8);
+  assert.equal(one.totalDocuments, 2);
+  assert.equal(one.totalPages, 7);
+  assert.deepEqual(one.results.map((row) => row.id), ['a1-first', 'a1-later', 'a2', 'a3', 'a4', 'a5', 'a6']);
+  assert.ok(one.results.every((row) => row.documentId === 'long' && row.relatedCount === 6));
+  assert.equal(one.results[0].occurrenceStart, 10);
+  assert.equal(one.results[2].occurrenceStart, null);
+  const bestScore = Math.max(...one.results.map((row) => row.score));
+  assert.ok(one.results.every((row) => row.documentScore === bestScore));
+  assert.ok(one.results[0].score < bestScore, 'PDF ranking uses its best hit even when the first page is less relevant.');
+  const two = grouped.search('disnea', { limit: 2 });
+  assert.equal(two.results.length, 8);
+  assert.deepEqual(two.results.slice(0, 7), one.results);
+  assert.equal(two.results[7].documentId, 'short');
 });
 
 test('generic thromboembolism does not acquire a pulmonary qualifier', async () => {
@@ -226,6 +267,20 @@ test('generic thromboembolism does not acquire a pulmonary qualifier', async () 
   assert.equal(result.results.length, 1);
   assert.equal(result.interpretation.concepts[0].id, 'thromboembolism');
   assert.deepEqual(result.results[0].matchedTerms, ['Tromboembolia']);
+});
+
+test('increasing the PDF limit can expose the complete library beyond the first hundred documents', async () => {
+  const large = await createSearchEngine(separatePages(Array.from({ length: 244 }, () => 'Disnea.')));
+  const initial = large.search('disnea');
+  const expanded = large.search('disnea', { limit: 120 });
+  const complete = large.search('disnea', { limit: 300 });
+  assert.equal(initial.results.length, 30);
+  assert.equal(expanded.results.length, 120);
+  assert.equal(complete.results.length, 244);
+  assert.equal(complete.totalDocuments, 244);
+  assert.equal(complete.totalPages, 244);
+  assert.deepEqual(expanded.results.slice(0, 30), initial.results);
+  assert.deepEqual(complete.results.slice(0, 120), expanded.results);
 });
 
 test('worker echoes request IDs, discards superseded initialization and clears its library', async (context) => {
