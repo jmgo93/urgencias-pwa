@@ -48,7 +48,7 @@ async function network(request) {
 }
 self.addEventListener('install', event => event.waitUntil((async () => {
   const cache = await caches.open(CACHE);
-  await cache.addAll(FILES.map(path => new URL(path, self.location).href));
+  await cache.addAll(FILES.map(path => new Request(absolute(path), { cache: 'reload' })));
   await self.skipWaiting();
 })()));
 self.addEventListener('activate', event => event.waitUntil((async () => {
