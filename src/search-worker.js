@@ -8,17 +8,22 @@ self.addEventListener('message', async ({ data }) => {
   const { type, requestId } = data ?? {};
   try {
     if (type === 'init') {
+      const started = performance.now();
       const currentGeneration = ++generation;
       engine = undefined;
       newestSearch = 0;
       const created = await createSearchEngine(data.corpus, {
+        preparedSearch: data.preparedSearch,
         onProgress: (progress) => {
           if (generation === currentGeneration) self.postMessage({ type: 'progress', requestId, ...progress });
         },
       });
       if (generation !== currentGeneration) return;
       engine = created;
-      self.postMessage({ type: 'ready', requestId, documentCount: engine.documentCount, fragmentCount: engine.fragmentCount });
+      self.postMessage({ type: 'ready', requestId, documentCount: engine.documentCount, fragmentCount: engine.fragmentCount,
+        restored: engine.restored, durationMs: Math.round((performance.now() - started) * 100) / 100,
+        ...(!engine.restored ? { preparedSearch: engine.exportPreparedSearch() } : {}),
+      });
       return;
     }
     if (type === 'search') {

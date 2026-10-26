@@ -25,6 +25,10 @@ Escribe una frase con los conceptos que te interesan y pulsa **Buscar**. Tambié
 | `fiebre rigidez de nuca` | Consulta con una expresión de varias palabras. |
 | `síncope palpitaciones` | Variantes con acentos y conexiones entre conceptos. |
 
+El índice se prepara la primera vez y se guarda cifrado en este dispositivo para reutilizarlo al abrir, en lugar de reconstruirlo cada vez. Puedes escribir desde que aparece el buscador. Si se muestra **Preparando la primera búsqueda…**, conserva tu frase y la ejecutará cuando termine de prepararse. Una biblioteca nueva o la retirada de datos locales puede requerir otra preparación.
+
+En **Últimas búsquedas** aparecen hasta 20 consultas recientes, guardadas cifradas sólo en este dispositivo. Toca una para repetirla con la sección y el tipo de contenido que utilizaste. **Borrar historial** retira esas consultas sin borrar el índice ni los PDF. La sección se oculta si no hay búsquedas guardadas.
+
 La búsqueda combina términos literales con un vocabulario inicial de sinónimos y siglas. No interpreta cualquier frase como un diagnóstico ni calcula probabilidades de enfermedad. Las expresiones desconocidas siguen buscando por sus palabras; la cobertura del vocabulario se ampliará tras la prueba.
 
 Puedes limitar los resultados a una sección o elegir **Capítulos** o **Casos clínicos**. Cada tarjeta presenta el fragmento, los términos encontrados, los términos que faltan en ese fragmento cuando corresponda, la página original y la página del PDF pequeño. También indica el tamaño y el número de páginas del documento.
@@ -73,6 +77,8 @@ En un dispositivo recordado, **Olvidar este dispositivo** elimina la clave de ac
 | El navegador no conecta en la primera prueba | Mantén abierta la ventana del servidor y recarga la dirección completa con `/urgencias-pwa/`. Cuando la app indique **Lista para usar sin conexión**, podrás volver a abrirla sin servidor. |
 | La contraseña no funciona | Copia de nuevo sólo el valor de `ACCESO_LOCAL.txt`; comprueba que se usa la carpeta `cifrado` correspondiente. |
 | Vuelve a pedir la contraseña en un dispositivo recordado | Comprueba que abres la misma app y el mismo navegador. Si borraste sus datos o pulsaste **Olvidar este dispositivo**, introduce la contraseña una vez y vuelve a marcar **Recordar este dispositivo**. |
+| El buscador está preparando la primera búsqueda | Puedes escribir y enviar tu consulta; se ejecutará cuando esté listo. La primera preparación guarda el índice cifrado para reutilizarlo en las siguientes aperturas. Si borraste los datos o cambiaste la biblioteca, debe prepararse otra vez. |
+| No aparece el historial | Se oculta mientras está vacío. Realiza una búsqueda y comprueba que utilizas la misma app y el mismo navegador; **Borrar historial** retira las consultas guardadas. |
 | La biblioteca no está disponible | En local, conserva `biblioteca-local/cifrado` junto a `repositorio-app` y desbloquéala con el servidor abierto. En Pages o en la app instalada, importa tu archivo `Biblioteca.urgencias`. No muevas los paquetes a `dist`. |
 | No aparece un aviso de instalación del navegador | Pulsa **Instalar app** y sigue la guía para tu dispositivo. La ausencia de un aviso automático no impide utilizar la guía de instalación. |
 | La app instalada no encuentra una biblioteca que ya importaste en una pestaña | Abre la app desde su icono, importa el paquete allí y pulsa **Preparar uso sin conexión**. |

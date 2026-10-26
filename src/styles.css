@@ -397,6 +397,22 @@ button, input, select { font-size: 17px; }
 #lock-button span { min-width: 0; overflow-wrap: anywhere; }
 .device-access-status { width: min(var(--layout-width), calc(100% - 80px)); margin: 12px auto 0; padding: 12px 16px; border-radius: 12px; background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); font-size: 17px; line-height: 1.65; overflow-wrap: anywhere; }
 .device-access-status:empty { display: none; }
+.startup-status { margin-top: 16px; padding: 12px 16px; border-radius: 12px; font-size: 17px; line-height: 1.65; color: var(--md-sys-color-on-surface-variant); background: var(--md-sys-color-surface-container); }
+.startup-status:empty { display: none; }
+.search-history { margin-top: 24px; padding: 18px 20px; border: 1px solid var(--md-sys-color-outline-variant); border-radius: 18px; background: var(--md-sys-color-surface-container-low); }
+.history-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.history-heading h2 { font-size: 20px; line-height: 1.5; }
+.history-heading .button { min-height: 48px; }
+#search-history-note { margin-top: 6px; color: var(--md-sys-color-on-surface-variant); font-size: 16px; line-height: 1.6; }
+.search-history-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; max-height: 280px; overflow-y: auto; overscroll-behavior: contain; margin: 16px 0 0; padding: 4px; list-style: none; }
+.search-history-list > li { min-width: 0; }
+.history-query-button { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; height: 100%; padding: 12px; border: 1px solid var(--md-sys-color-outline-variant); border-radius: 12px; background: var(--md-sys-color-surface); color: var(--md-sys-color-on-surface); text-align: left; }
+.history-query-button:hover { border-color: var(--md-sys-color-primary); background: var(--md-sys-color-surface-container); }
+.history-query-button > .icon { width: 20px; height: 20px; color: var(--md-sys-color-primary); }
+.history-query-button > .icon:last-child { margin-left: auto; }
+.history-query-content { min-width: 0; }
+.history-query-text { display: block; font-size: 18px; font-weight: 700; line-height: 1.55; overflow-wrap: anywhere; }
+.history-query-date { display: block; margin-top: 4px; color: var(--md-sys-color-on-surface-variant); font-size: 14px; line-height: 1.5; }
 .select-wrap select { min-height: 44px; font-size: 17px; }
 .reader-paging input { width: 58px; min-height: 44px; font-size: 17px; }
 .intro-copy, .unlock-card > p, .search-heading > div > p { font-size: 18px; line-height: 1.7; }
@@ -445,6 +461,10 @@ button, input, select { font-size: 17px; }
 }
 @media (max-width: 520px) {
   .device-access-status { width: calc(100% - 32px); }
+  .search-history { padding: 16px 12px; border-radius: 14px; }
+  .search-history-list { grid-template-columns: minmax(0, 1fr); max-height: 280px; gap: 10px; }
+  .history-heading { gap: 4px 12px; }
+  .history-heading .button { padding-left: 8px; padding-right: 8px; }
   .brand-name { font-size: 24px; }
   .brand-caption { font-size: 11px; letter-spacing: .6px; }
   .brand-symbol { width: 40px; height: 42px; }

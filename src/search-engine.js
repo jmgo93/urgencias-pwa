@@ -7,6 +7,9 @@ const SCOPE_STOPS = new Set(['pero', 'aunque', 'excepto', 'however', 'but', 'con
 const NEGATION_CONTINUATIONS = new Set(['ni', 'y', 'o', 'and', 'or', 'nor']);
 const tokenPattern = /[\p{L}\p{N}]+(?:[.,][\p{N}]+)?/gu;
 const now = () => globalThis.performance?.now() ?? Date.now();
+const PREPARED_SCHEMA = 1;
+const ENGINE_VERSION = 'urgencias-search-2:minisearch-7.2.0';
+const encoder = new TextEncoder();
 
 /** Lowercase and remove accents while keeping ñ distinct from n. */
 export function normalize(value) {
@@ -175,21 +178,52 @@ function makeExcerpt(text, matched) {
   return `${start ? '…' : ''}${clean.slice(start, stop)}${stop < clean.length ? '…' : ''}`;
 }
 
-/** Build in a worker: the complete OCR/native text remains local and in memory. */
-export async function createSearchEngine(corpus, { onProgress } = {}) {
+function indexOptions() {
+  return {
+    fields: ['heading', 'body'], idField: 'id',
+    tokenize: tokens, processTerm: (term) => term,
+    searchOptions: { boost: { heading: 3, body: 1 }, combineWith: 'OR' },
+  };
+}
+
+async function corpusFingerprint(corpus) {
+  const digest = await crypto.subtle.digest('SHA-256', encoder.encode(JSON.stringify(corpus)));
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+function restorePrepared(prepared, fingerprint, sourceFragments) {
+  try {
+    if (prepared?.schemaVersion !== PREPARED_SCHEMA || prepared.engineVersion !== ENGINE_VERSION
+      || prepared.corpusFingerprint !== fingerprint || !Array.isArray(prepared.normalizedFragments)
+      || prepared.normalizedFragments.length !== sourceFragments.length) return null;
+    const fragments = new Map();
+    for (let offset = 0; offset < sourceFragments.length; offset += 1) {
+      const fragment = sourceFragments[offset];
+      const row = prepared.normalizedFragments[offset];
+      if (!Array.isArray(row) || row.length !== 3 || row[0] !== fragment.id
+        || typeof row[1] !== 'string' || typeof row[2] !== 'string' || fragments.has(fragment.id)) return null;
+      fragments.set(fragment.id, { ...fragment, headingSearch: row[1], bodySearch: row[2] });
+    }
+    const index = MiniSearch.loadJS(prepared.index, indexOptions());
+    if (index.documentCount !== fragments.size || [...fragments.keys()].some((id) => !index.has(id))) return null;
+    return { index, fragments };
+  } catch { return null; }
+}
+
+/** Prepared payloads contain book text and must only be persisted encrypted by the caller. */
+export async function createSearchEngine(corpus, { onProgress, preparedSearch } = {}) {
   if (!corpus || !Array.isArray(corpus.fragments) || !Array.isArray(corpus.documents)) {
     throw new Error('La biblioteca no tiene un índice de búsqueda válido.');
   }
   const documents = new Map(corpus.documents.map((document) => [document.id, document]));
   const sections = new Map((corpus.sections ?? []).map((section) => [section.id, section]));
-  const fragments = new Map();
-  const index = new MiniSearch({
-    fields: ['heading', 'body'], idField: 'id',
-    tokenize: tokens, processTerm: (term) => term,
-    searchOptions: { boost: { heading: 3, body: 1 }, combineWith: 'OR' },
-  });
+  const sourceFragments = corpus.fragments.filter((fragment) => documents.has(fragment.documentId));
+  const fingerprint = await corpusFingerprint(corpus);
+  const prepared = restorePrepared(preparedSearch, fingerprint, sourceFragments);
+  const fragments = prepared?.fragments ?? new Map();
+  const index = prepared?.index ?? new MiniSearch(indexOptions());
   const batchSize = 250;
-  for (let offset = 0; offset < corpus.fragments.length; offset += batchSize) {
+  for (let offset = 0; !prepared && offset < corpus.fragments.length; offset += batchSize) {
     const batch = corpus.fragments.slice(offset, offset + batchSize).filter((fragment) => documents.has(fragment.documentId));
     for (const fragment of batch) {
       const document = documents.get(fragment.documentId);
@@ -206,6 +240,14 @@ export async function createSearchEngine(corpus, { onProgress } = {}) {
   return {
     documentCount: documents.size,
     fragmentCount: fragments.size,
+    restored: Boolean(prepared),
+    exportPreparedSearch() {
+      return {
+        schemaVersion: PREPARED_SCHEMA, engineVersion: ENGINE_VERSION, corpusFingerprint: fingerprint,
+        normalizedFragments: [...fragments.values()].map((fragment) => [fragment.id, fragment.headingSearch, fragment.bodySearch]),
+        index: index.toJSON(),
+      };
+    },
     search(query, { sectionId = '', kind = '', limit = 30 } = {}) {
       const started = now();
       const parsed = parseQuery(query);

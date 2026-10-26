@@ -18,6 +18,8 @@ La [guía de primera prueba](docs/PRIMERA_PRUEBA_LOCAL.md) explica los controles
 ## Qué incluye
 
 - Búsqueda por frases, términos literales, siglas y un vocabulario inicial de sinónimos y equivalencias. Se conservan las negaciones y se señalan siglas ambiguas.
+- Índice preparado guardado cifrado en este dispositivo para reutilizarlo al abrir; no se vuelve a construir en cada inicio. Puedes escribir mientras termina de preparar la primera búsqueda.
+- Historial privado local de las últimas 20 búsquedas: repite una consulta con sus filtros o utiliza **Borrar historial** para retirarlo sin borrar la biblioteca.
 - Filtros por sección y por capítulos o casos, con conexiones explicadas, coincidencias y términos ausentes en cada fragmento.
 - Lector de PDF con página original y página del documento pequeño, navegación, zoom y texto extraído. Conserva consulta, filtros, resultados y posición al volver.
 - Biblioteca local de **244 PDF: 198 capítulos, 45 casos y un documento de preliminares**, que cubren las **1.101 páginas** del libro. Las **32 páginas con OCR** están identificadas.
@@ -56,6 +58,8 @@ La extracción conserva las páginas originales sin reducir su resolución. Eso 
 ## Información personal y publicación
 
 El código compilado de `dist` excluye el libro, los PDF, las transcripciones, el corpus, los paquetes cifrados y las contraseñas. El servidor local conecta ese código con la carpeta personal externa. En Pages, la biblioteca se importa desde un único archivo `.urgencias` del dispositivo, por bloques y sin cargar el paquete entero en memoria. Se verifican sus archivos y se guarda la biblioteca cifrada. Al recordar el dispositivo, se conserva además una clave de acceso `CryptoKey` local en IndexedDB; la contraseña no se almacena ni se envía a un servidor. Quien tenga acceso a ese navegador podrá abrir la biblioteca mientras el dispositivo siga recordado.
+
+La primera preparación del buscador guarda una copia cifrada del índice ya construido. Las aperturas posteriores reutilizan esa copia compatible; deben leerla y descifrarla, pero no reconstruirla. Se prepara de nuevo si cambia la biblioteca, la versión del índice o se retiran sus datos locales. El historial de consultas y filtros también se guarda cifrado en este dispositivo y no se envía a GitHub. **Borrar historial** elimina esas consultas y conserva el índice y los PDF.
 
 El contenido permanece local; cambiar su formato o cifrarlo no concede derechos de distribución. [Separación de archivos personales](docs/ARCHIVOS_PERSONALES.md).
 

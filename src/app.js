@@ -13,6 +13,8 @@ import { reconstructPage } from './page-text.js';
 import { disposePDFTask } from './pdf-lifecycle.js';
 import { setupInstallation } from './install.js';
 import { saveDeviceAccess, loadDeviceAccess, forgetDeviceAccess } from './device-access.js';
+import { readPreparedSearch, writePreparedSearch, readSearchHistory, writeSearchHistory,
+  clearSearchHistory, forgetLocalSearchData } from './local-search-data.js';
 import { libraryCacheName, getActiveLibraryManifest, saveLibraryManifest, inspectLibraryCache,
   getLibraryAssetResponse, fetchWithTimeout, CONTROL_CACHE, LIBRARY_PREFIX } from './offline.js';
 import pdfWorkerURL from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
@@ -48,6 +50,7 @@ let currentResult;
 let resultIndex = -1;
 let queryRequest = 0;
 let debounce;
+let historyDebounce;
 let lockTimer;
 let searchScroll = 0;
 let pdfLibrary;
@@ -67,6 +70,22 @@ let availabilityGeneration = 0;
 let serviceWorkerRegistration;
 let openingLibrary = false;
 let restoringDevice = false;
+let localWrites = Promise.resolve();
+function queueLocalWrite(operation) {
+  const pending = localWrites.then(operation);
+  localWrites = pending.catch(() => {});
+  return pending;
+}
+async function forgetPersonalAccess() {
+  const active = session;
+  if (active) active.forgetting = true;
+  try {
+    await queueLocalWrite(async () => { await forgetLocalSearchData(); await forgetDeviceAccess(); });
+  } catch (error) {
+    if (session === active && active) active.forgetting = false;
+    throw error;
+  }
+}
 
 function touchSession() {
   clearTimeout(lockTimer);
@@ -111,7 +130,9 @@ e.unlockForm.addEventListener('submit', async event => {
 async function openLibrary({ password, savedKey, knownManifest, remember = false } = {}) {
   if (openingLibrary || importingLibrary || session || (restoringDevice && !savedKey)) return;
   openingLibrary = true;
+  const openedAt = performance.now();
   e.unlockButton.disabled = true;
+  e.lockButton.disabled = true;
   e.rememberDevice.disabled = true;
   e.removeOfflineButton.disabled = true;
   document.querySelector('#import-library-button').disabled = true;
@@ -123,30 +144,61 @@ async function openLibrary({ password, savedKey, knownManifest, remember = false
     manifest = knownManifest ?? await loadManifest();
     const key = savedKey ?? await deriveLibraryKey(password, manifest.kdf);
     password = undefined;
-    active = { key, manifest, corpus: null, worker: null, remembered: Boolean(savedKey) };
+    active = { key, manifest, corpus: null, worker: null, remembered: Boolean(savedKey), ready: false, history: [] };
     session = active;
-    const bytes = await readAsset('corpus', active);
+    e.sectionFilter.disabled = true;
+    e.kindFilter.disabled = true;
+    if (savedKey) {
+      ui.setLocked(false);
+      e.startupStatus.textContent = 'Abriendo tu búsqueda…';
+      history.replaceState({}, '', base.pathname);
+      window.scrollTo(0, 0);
+      e.query.focus({ preventScroll: true });
+    }
+    const [bytes, preparedSearch, searchHistory] = await Promise.all([
+      readAsset('corpus', active), readPreparedSearch(manifest, key), readSearchHistory(manifest, key),
+    ]);
     const corpus = JSON.parse(new TextDecoder().decode(bytes));
     bytes.fill(0);
     if (corpus.schemaVersion !== 1 || !Array.isArray(corpus.fragments) || !Array.isArray(corpus.documents)) throw new Error('Contenido no compatible.');
     active.corpus = corpus;
-    e.unlockStatus.textContent = 'Preparando el buscador del libro completo…';
+    active.history = searchHistory;
+    e.sectionFilter.innerHTML = '<option value="">Todas las secciones</option>' + corpus.sections.map(section => `<option value="${escapeHtml(section.id)}">${escapeHtml(section.title)}</option>`).join('');
+    e.sectionFilter.disabled = false;
+    e.kindFilter.disabled = false;
+    e.libraryTitle.textContent = `${corpus.documents.length} documentos · ${corpus.sourcePageCount} páginas`;
+    ui.renderHistory(active.history);
+    ui.setLocked(false);
+    e.startupStatus.textContent = preparedSearch ? 'Abriendo tu buscador guardado…' : 'Primera preparación del buscador. Ya puedes escribir tu búsqueda.';
+    history.replaceState({}, '', base.pathname);
+    window.scrollTo(0, 0);
+    e.query.focus({ preventScroll: true });
     const worker = new Worker(new URL('./search-worker.js', import.meta.url), { type: 'module' });
     active.worker = worker;
+    worker.addEventListener('message', onSearchMessage);
     await new Promise((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error('El buscador está tardando demasiado.')), 60000);
       worker.addEventListener('error', () => { clearTimeout(timer); reject(new Error('No se pudo iniciar el buscador.')); }, { once: true });
       worker.addEventListener('message', function onMessage({ data }) {
         if (session !== active) { clearTimeout(timer); reject(new Error('Sesión cerrada.')); return; }
-        if (data.type === 'progress') e.unlockStatus.textContent = `Preparando el buscador… ${Math.round((data.loaded || data.completed || 0) / corpus.fragments.length * 100)} %`;
+        if (data.type === 'progress') e.startupStatus.textContent = `Preparando la primera búsqueda… ${Math.round((data.loaded || data.completed || 0) / corpus.fragments.length * 100)} %. Puedes ir escribiendo.`;
         if (data.type === 'error') { clearTimeout(timer); reject(new Error(data.message)); }
-        if (data.type === 'ready') { clearTimeout(timer); worker.removeEventListener('message', onMessage); resolve(); }
+        if (data.type === 'ready') {
+          clearTimeout(timer); worker.removeEventListener('message', onMessage);
+          active.ready = true;
+          e.startupStatus.dataset.restored = String(data.restored === true);
+          e.startupStatus.dataset.engineMs = String(data.durationMs);
+          e.startupStatus.dataset.startupMs = String(Math.round(performance.now() - openedAt));
+          e.startupStatus.textContent = '';
+          if (data.preparedSearch) queueLocalWrite(async () => {
+            if (session === active && !active.forgetting) await writePreparedSearch(active.manifest, active.key, data.preparedSearch);
+          }).catch(() => { if (session === active) e.startupStatus.textContent = 'Puedes buscar. No se pudo guardar la preparación para el próximo inicio.'; });
+          if (e.query.value.trim()) search();
+          resolve();
+        }
       });
-      worker.postMessage({ type: 'init', requestId: 0, corpus });
+      worker.postMessage({ type: 'init', requestId: 0, corpus, preparedSearch });
     });
-    worker.addEventListener('message', onSearchMessage);
-    e.sectionFilter.innerHTML = '<option value="">Todas las secciones</option>' + corpus.sections.map(section => `<option value="${escapeHtml(section.id)}">${escapeHtml(section.title)}</option>`).join('');
-    e.libraryTitle.textContent = `${corpus.documents.length} documentos · ${corpus.sourcePageCount} páginas`;
     e.offlineButton.title = `Descarga cifrada: ${formatBytes(manifest.totalBytes)}`;
     if (session !== active) return;
     if (!savedKey) {
@@ -164,25 +216,21 @@ async function openLibrary({ password, savedKey, knownManifest, remember = false
     if (active.remembered) e.deviceAccessStatus.textContent = 'Dispositivo recordado. La biblioteca se abrirá automáticamente, también sin conexión.';
     e.lockButton.querySelector('span').textContent = active.remembered || active.forgetRequired ? 'Olvidar este dispositivo' : 'Bloquear';
     e.unlockStatus.textContent = '';
-    ui.setLocked(false);
-    history.replaceState({}, '', base.pathname);
     touchSession();
-    window.scrollTo(0, 0);
-    e.query.focus();
     updateOfflineState();
   } catch {
     password = undefined;
     active?.worker?.terminate();
-    session = undefined;
-    e.unlockStatus.textContent = savedKey ? 'No se pudo abrir el acceso recordado. Introduce la contraseña para volver a abrir la biblioteca.' : manifest
+    const message = savedKey ? 'No se pudo abrir el acceso recordado. Introduce la contraseña para volver a abrir la biblioteca.' : manifest
       ? 'No se ha podido abrir. Comprueba la contraseña y que la biblioteca esté disponible.'
       : 'Importa primero tu archivo Biblioteca.urgencias para activar el buscador.';
-    e.password.focus();
+    await lock(message);
   } finally {
     password = undefined;
     savedKey = undefined;
     openingLibrary = false;
     e.unlockButton.disabled = false;
+    e.lockButton.disabled = false;
     e.rememberDevice.disabled = false;
     e.removeOfflineButton.disabled = Boolean(importingLibrary || offlineAbort || restoringDevice);
     document.querySelector('#import-library-button').disabled = false;
@@ -215,6 +263,8 @@ function onSearchMessage({ data }) {
   ui.setSearchBusy(false);
   if (data.type === 'error') { e.searchStatus.textContent = data.message; return; }
   if (data.type !== 'results') return;
+  clearTimeout(historyDebounce);
+  historyDebounce = setTimeout(() => rememberSearch({ automatic: true }), 1200);
   results = data.results;
   ui.renderResults(results, session.corpus.sections);
   ui.renderInterpretation(data.interpretation);
@@ -225,6 +275,7 @@ function onSearchMessage({ data }) {
 }
 function search() {
   clearTimeout(debounce);
+  clearTimeout(historyDebounce);
   if (!session?.worker) return;
   const query = e.query.value.trim();
   ++queryRequest;
@@ -239,23 +290,66 @@ function search() {
     return;
   }
   ui.setSearchBusy(true);
+  if (!session.ready) {
+    e.searchStatus.textContent = 'Tu consulta está preparada. Los resultados aparecerán al terminar esta primera preparación.';
+    return;
+  }
   e.searchStatus.textContent = 'Relacionando conceptos en el libro completo…';
   session.worker.postMessage({ type: 'search', requestId: queryRequest, query,
     filters: { sectionId: e.sectionFilter.value, kind: e.kindFilter.value, limit: 30 } });
 }
-e.searchForm.addEventListener('submit', event => { event.preventDefault(); search(); });
-e.query.addEventListener('input', () => { ++queryRequest; clearTimeout(debounce); debounce = setTimeout(search, 180); });
-e.sectionFilter.addEventListener('change', search);
-e.kindFilter.addEventListener('change', search);
-e.clearQuery.addEventListener('click', () => { e.query.value = ''; search(); e.query.focus(); });
+function rememberSearch({ automatic = false } = {}) {
+  clearTimeout(historyDebounce);
+  const active = session;
+  const query = e.query.value.trim().replace(/\s+/g, ' ').slice(0, 500);
+  if (!active || active.forgetting || !query) return;
+  if (automatic && active.historyCleared) return;
+  if (!automatic) active.historyCleared = false;
+  const entry = { query, sectionId: e.sectionFilter.value, kind: e.kindFilter.value, lastUsedAt: Date.now() };
+  const identity = value => JSON.stringify([value.query.toLocaleLowerCase('es'), value.sectionId, value.kind]);
+  active.history = [entry, ...active.history.filter(value => identity(value) !== identity(entry))].slice(0, 20);
+  ui.renderHistory(active.history);
+  const entries = active.history.slice();
+  queueLocalWrite(async () => {
+    if (session === active && !active.forgetting) await writeSearchHistory(active.manifest, active.key, entries);
+  }).catch(() => { if (session === active) e.startupStatus.textContent = 'La búsqueda funciona, pero no se pudo guardar el historial en este dispositivo.'; });
+}
+e.searchForm.addEventListener('submit', event => { event.preventDefault(); rememberSearch(); search(); });
+e.query.addEventListener('input', () => { if (session) session.historyCleared = false; ++queryRequest; clearTimeout(debounce); clearTimeout(historyDebounce); debounce = setTimeout(search, 180); });
+for (const filter of [e.sectionFilter, e.kindFilter]) filter.addEventListener('change', () => { if (session) session.historyCleared = false; search(); });
+e.clearQuery.addEventListener('click', () => { clearTimeout(historyDebounce); e.query.value = ''; search(); e.query.focus(); });
 document.addEventListener('click', event => {
   const example = event.target.closest('[data-query]');
-  if (example && session) { e.query.value = example.dataset.query; search(); e.query.focus(); }
+  if (example && session) { e.query.value = example.dataset.query; rememberSearch(); search(); e.query.focus(); }
+  const previous = event.target.closest('[data-history-query]');
+  if (previous && session) {
+    e.query.value = previous.dataset.historyQuery;
+    e.sectionFilter.value = previous.dataset.historySection || '';
+    e.kindFilter.value = previous.dataset.historyKind || '';
+    rememberSearch(); search(); e.query.focus({ preventScroll: true });
+  }
   const result = event.target.closest('[data-open-result]');
   if (result) {
+    rememberSearch();
     searchScroll = window.scrollY;
     openResult(result.dataset.openResult, true);
   }
+});
+e.clearHistoryButton.addEventListener('click', async () => {
+  clearTimeout(historyDebounce);
+  const active = session;
+  if (!active || active.forgetting) return;
+  const previousHistory = active.history.slice();
+  active.historyCleared = true;
+  active.history = [];
+  ui.renderHistory([]);
+  e.query.focus({ preventScroll: true });
+  try { await queueLocalWrite(() => clearSearchHistory(active.manifest)); }
+  catch { if (session === active) {
+    active.history = [...active.history, ...previousHistory].slice(0, 20);
+    ui.renderHistory(active.history);
+    e.startupStatus.textContent = 'No se pudo borrar el historial guardado. Vuelve a intentarlo antes de cerrar la app.';
+  } }
 });
 
 async function getPDFLibrary() {
@@ -419,6 +513,7 @@ async function lock(message = '') {
   ++openGeneration;
   ++queryRequest;
   clearTimeout(debounce);
+  clearTimeout(historyDebounce);
   clearTimeout(lockTimer);
   offlineAbort?.abort();
   offlineAbort = undefined;
@@ -438,6 +533,11 @@ async function lock(message = '') {
   e.sectionFilter.innerHTML = '<option value="">Todas las secciones</option>';
   e.kindFilter.value = '';
   e.searchStatus.textContent = '';
+  e.startupStatus.textContent = '';
+  delete e.startupStatus.dataset.restored;
+  delete e.startupStatus.dataset.engineMs;
+  delete e.startupStatus.dataset.startupMs;
+  ui.renderHistory([]);
   e.offlineStatus.textContent = '';
   e.interpretation.replaceChildren();
   e.interpretation.hidden = true;
@@ -457,7 +557,7 @@ e.lockButton.addEventListener('click', async () => {
   e.lockButton.disabled = true;
   try {
     if (session?.remembered || session?.forgetRequired) {
-      await forgetDeviceAccess();
+      await forgetPersonalAccess();
       await lock('Este dispositivo se ha olvidado. La próxima vez tendrás que introducir la contraseña.');
     } else await lock();
   } catch {
@@ -637,7 +737,7 @@ e.removeOfflineButton?.addEventListener('click', async () => {
   if (importingLibrary || offlineAbort || openingLibrary || restoringDevice) return;
   e.removeOfflineButton.disabled = true;
   try {
-    await forgetDeviceAccess();
+    await forgetPersonalAccess();
     for (const name of await caches.keys()) if (name.startsWith(LIBRARY_PREFIX) || name === CONTROL_CACHE) await caches.delete(name);
     await lock('Biblioteca retirada del dispositivo. Importa tu archivo para volver a consultarla.');
     e.offlineStatus.textContent = 'Biblioteca eliminada de este dispositivo. La aplicación sigue instalada.';

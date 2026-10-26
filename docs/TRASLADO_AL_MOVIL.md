@@ -17,6 +17,10 @@ La aplicación publicada contiene el buscador y el lector. Tu libro se incorpora
 
 6. **Compruébalo en tu móvil.** Una vez que indique que está lista, activa el modo avión, cierra y vuelve a abrir Urgencias desde su icono. Si has recordado el dispositivo, se abrirá sin volver a pedir la contraseña. Realiza una búsqueda y abre un PDF que todavía no hayas consultado. Así comprobarás la preparación en tu dispositivo.
 
+El índice del buscador se prepara la primera vez y queda guardado cifrado para reutilizarlo al abrir. Puedes empezar a escribir aunque aparezca **Preparando la primera búsqueda…**; tu consulta se ejecutará cuando termine esa preparación. Si cambias la biblioteca o se eliminan los datos de la app, puede necesitar prepararlo de nuevo.
+
+**Últimas búsquedas** guarda en este dispositivo hasta 20 consultas con sus filtros. Toca una para repetirla o pulsa **Borrar historial** para retirarlas sin borrar el libro. El historial se guarda cifrado y no se envía a Internet.
+
 **Olvidar este dispositivo** borra la clave de acceso guardada y cierra la sesión; conserva la biblioteca cifrada. La siguiente vez tendrás que introducir la contraseña, que también funciona sin Internet. Si desmarcas **Recordar este dispositivo** al desbloquear, la clave se mantiene sólo durante esa sesión y la app se bloquea tras 15 minutos sin actividad. En un dispositivo recordado no se aplica ese bloqueo automático. Activa el recuerdo sólo en un dispositivo personal: cualquiera que pueda usar esa app podrá abrir su biblioteca.
 
 Conserva el paquete personal como copia. El navegador o el sistema pueden liberar almacenamiento; borrar los datos de la app también elimina su biblioteca local. Si faltan archivos, recupera la conexión para preparar la app e importa de nuevo tu paquete. **Eliminar biblioteca del dispositivo** permite borrar voluntariamente la copia guardada en la app.

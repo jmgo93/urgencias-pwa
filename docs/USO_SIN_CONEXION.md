@@ -22,6 +22,12 @@ La importación conserva una copia cifrada dentro del almacenamiento de la aplic
 
 El buscador utiliza el índice local. El lector abre únicamente el PDF pequeño elegido, también desde este dispositivo. La copia guardada permanece cifrada; recordar el dispositivo permite abrirla mediante su clave local. Utiliza esta opción sólo en un dispositivo personal, porque quien pueda usar esa app podrá consultar la biblioteca.
 
+## Buscar al abrir y recuperar consultas
+
+El índice se prepara la primera vez y queda guardado cifrado en este dispositivo. En las aperturas posteriores se reutiliza, sin reconstruirlo cada vez. Puedes empezar a escribir mientras aparece **Preparando la primera búsqueda…**; la app conserva esa consulta para ejecutarla cuando esté lista. Si cambias la biblioteca o se borran sus datos, puede necesitar prepararlo de nuevo.
+
+**Últimas búsquedas** muestra hasta 20 consultas recientes con sus filtros. Toca una para repetirla, también sin Internet. El historial se guarda cifrado sólo en este dispositivo. **Borrar historial** elimina las consultas y mantiene el índice y los documentos; no se envía el historial a GitHub.
+
 ## Recordar u olvidar el acceso
 
 **Recordar este dispositivo** está marcado inicialmente y evita repetir la contraseña al cerrar, recargar y volver a abrir, también sin Internet. La app conserva una clave de acceso local; no guarda el texto de la contraseña. No aplica bloqueo por inactividad mientras el dispositivo esté recordado.
